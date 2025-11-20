@@ -10,6 +10,7 @@ import androidx.navigation.navigation
 import com.example.asistalk.ui.MainScreen
 import com.example.asistalk.ui.asishub.AsisHubScreen
 import com.example.asistalk.ui.asislearn.AsisLearnScreen
+import com.example.asistalk.ui.asislearn.UploadMaterial
 import com.example.asistalk.ui.auth.LoginScreen
 import com.example.asistalk.ui.auth.RegisterScreen
 import com.example.asistalk.ui.home.HomeScreen
@@ -75,6 +76,9 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         composable("asishub") { AsisHubScreen(navController = navController) }
         composable("asislearn") { AsisLearnScreen(navController = navController) }
         composable("profile") { ProfileScreen(navController = navController) }
+
+        composable("UploadMaterial") { UploadMaterial(navController = navController) }
+
     }
 }
 
