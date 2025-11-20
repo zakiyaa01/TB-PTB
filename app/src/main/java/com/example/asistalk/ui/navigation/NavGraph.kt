@@ -9,6 +9,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.example.asistalk.ui.MainScreen
 import com.example.asistalk.ui.asishub.AsisHubScreen
+import com.example.asistalk.ui.asishub.CreatePostScreen
+import com.example.asistalk.ui.asishub.EditPostScreen
+import com.example.asistalk.ui.asishub.NotificationScreen
+import com.example.asistalk.ui.asishub.PostDetailScreen
 import com.example.asistalk.ui.asislearn.AsisLearnScreen
 import com.example.asistalk.ui.auth.LoginScreen
 import com.example.asistalk.ui.auth.RegisterScreen
@@ -69,12 +73,17 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         startDestination = "home",
         modifier = modifier
     ) {
-        // --- PERBAIKAN UTAMA ADA DI SINI ---
-        // Teruskan 'navController' ke SETIAP fungsi layar
+        // Rute untuk Bottom Navigation Bar
         composable("home") { HomeScreen(navController = navController) }
         composable("asishub") { AsisHubScreen(navController = navController) }
         composable("asislearn") { AsisLearnScreen(navController = navController) }
         composable("profile") { ProfileScreen(navController = navController) }
+
+        // Rute AsisHub
+        composable("createPost") { CreatePostScreen(navController = navController) }
+        composable("editPost") { EditPostScreen(navController = navController) }
+        composable("postDetail") { PostDetailScreen(navController = navController) }
+        composable("notif") { NotificationScreen(navController = navController) }
     }
 }
 
