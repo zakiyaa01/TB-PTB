@@ -7,11 +7,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
+import com.example.asistalk.ui.MainScreen
+import com.example.asistalk.ui.asishub.AsisHubScreen
+import com.example.asistalk.ui.asislearn.AsisLearnScreen
 import com.example.asistalk.ui.auth.LoginScreen
 import com.example.asistalk.ui.auth.RegisterScreen
 import com.example.asistalk.ui.home.HomeScreen
-import com.example.asistalk.ui.asishub.AsisHubScreen
-import com.example.asistalk.ui.asislearn.AsisLearnScreen
 import com.example.asistalk.ui.profile.ProfileScreen
 
 @Composable
@@ -25,7 +26,11 @@ fun NavGraph(
         modifier = modifier
     ) {
         authNavGraph(navController)
-        mainNavGraph()
+
+        // Panggil MainScreen sebagai satu layar besar setelah login berhasil
+        composable(route = Graph.MAIN) {
+            MainScreen()
+        }
     }
 }
 
@@ -36,29 +41,40 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
     ) {
         composable("login") {
             LoginScreen(
-                navController = navController,
                 onLoginSuccess = {
                     navController.navigate(Graph.MAIN) {
                         popUpTo(Graph.AUTHENTICATION) { inclusive = true }
                     }
+                },
+                onNavigateToRegister = {
+                    navController.navigate("register")
                 }
             )
         }
         composable("register") {
-            RegisterScreen(navController = navController)
+            RegisterScreen(
+                onNavigateBackToLogin = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }
 
-fun NavGraphBuilder.mainNavGraph() {
-    navigation(
+// FUNGSI INI SEKARANG MENJADI NAVHOST UNTUK KONTEN UTAMA
+@Composable
+fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
+    NavHost(
+        navController = navController,
         startDestination = "home",
-        route = Graph.MAIN
+        modifier = modifier
     ) {
-        composable("home") { HomeScreen() }
-        composable("asishub") { AsisHubScreen() }
-        composable("asislearn") { AsisLearnScreen() }
-        composable("profile") { ProfileScreen() }
+        // --- PERBAIKAN UTAMA ADA DI SINI ---
+        // Teruskan 'navController' ke SETIAP fungsi layar
+        composable("home") { HomeScreen(navController = navController) }
+        composable("asishub") { AsisHubScreen(navController = navController) }
+        composable("asislearn") { AsisLearnScreen(navController = navController) }
+        composable("profile") { ProfileScreen(navController = navController) }
     }
 }
 

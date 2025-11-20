@@ -14,8 +14,8 @@ import com.example.asistalk.R
 fun BottomNavBar(navController: NavController) {
     val items = listOf(
         NavItem("Home", R.drawable.ic_home, "home"),
-        NavItem("AsisHub", R.drawable.ic_hub, "asishub"),
-        NavItem("AsisLearn", R.drawable.ic_learn, "asislearn"),
+        NavItem("AsisHub", R.drawable.ic_asishub, "asishub"),
+        NavItem("AsisLearn", R.drawable.ic_asislearn, "asislearn"),
         NavItem("Profile", R.drawable.ic_profile, "profile")
     )
 

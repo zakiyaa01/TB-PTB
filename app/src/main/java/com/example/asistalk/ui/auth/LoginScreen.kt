@@ -23,7 +23,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+// import androidx.navigation.NavController // <-- HAPUS IMPORT INI
 import com.example.asistalk.R
 import com.example.asistalk.network.LoginRequest
 import com.example.asistalk.network.RetrofitClient
@@ -31,8 +31,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    navController: NavController,
-    onLoginSuccess: () -> Unit
+    // --- PERBAIKAN DI SINI ---
+    onLoginSuccess: () -> Unit,
+    onNavigateToRegister: () -> Unit // Tambahkan parameter ini
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -188,10 +189,11 @@ fun LoginScreen(
             Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 Text("Belum punya akun? ", color = Color.Gray)
                 Text(
-                    "Sign Up",
+                    text = "Sign Up",
                     color = Color(0xFF00BFA6),
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { navController.navigate("register") }
+                    // --- PERBAIKAN DI SINI ---
+                    modifier = Modifier.clickable { onNavigateToRegister() } // Panggil callback
                 )
             }
         }
