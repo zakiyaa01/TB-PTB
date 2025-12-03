@@ -14,6 +14,7 @@ import com.example.asistalk.ui.auth.LoginScreen
 import com.example.asistalk.ui.auth.RegisterScreen
 import com.example.asistalk.ui.home.HomeScreen
 import com.example.asistalk.ui.profile.ProfileScreen
+import com.example.asistalk.ui.asislearn.UploadMaterialScreen
 
 @Composable
 fun NavGraph(
@@ -75,6 +76,8 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         composable("asishub") { AsisHubScreen(navController = navController) }
         composable("asislearn") { AsisLearnScreen(navController = navController) }
         composable("profile") { ProfileScreen(navController = navController) }
+        composable("uploadMaterial") { UploadMaterialScreen(navController = navController) }
+
     }
 }
 
