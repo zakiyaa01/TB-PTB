@@ -1,19 +1,19 @@
 package com.example.asistalk.ui.asishub
 
-import android.net.Uri // Pastikan import ini ada
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-// 1. Definisikan model data untuk sebuah Post
-//    Saya tambahkan 'imageUri' agar setiap post bisa punya gambar
+// 1. Definisikan model data untuk sebuah Post (Tidak ada perubahan)
 data class Post(
     val id: Int,
     val author: String,
     val timestamp: String,
     val content: String,
-    val imageUri: Uri? = null, // <-- TAMBAHAN: untuk menyimpan gambar postingan
+    val imageUri: Uri? = null,
     val commentsCount: Int = 0
 )
 
@@ -21,50 +21,98 @@ data class Post(
 class AsisHubViewModel : ViewModel() {
 
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
-    val posts = _posts.asStateFlow()
+    val posts: StateFlow<List<Post>> = _posts.asStateFlow()
 
-    // --- PENAMBAHAN FUNGSI UNTUK GAMBAR ---
-
-    // State untuk menyimpan URI gambar yang dipilih sementara saat membuat post
+    // State untuk menyimpan URI gambar yang dipilih sementara (Tidak ada perubahan)
     private val _selectedImageUri = MutableStateFlow<Uri?>(null)
-    val selectedImageUri = _selectedImageUri.asStateFlow()
+    val selectedImageUri: StateFlow<Uri?> = _selectedImageUri.asStateFlow()
 
-    // Fungsi ini dipanggil saat pengguna memilih gambar (dari kamera atau galeri)
+    // ✅ State untuk menampung post yang sedang diedit
+    private val _postToEdit = MutableStateFlow<Post?>(null)
+    val postToEdit: StateFlow<Post?> = _postToEdit.asStateFlow()
+
+
+    // --- FUNGSI UNTUK GAMBAR (Tidak ada perubahan) ---
     fun onImageSelected(uri: Uri?) {
         _selectedImageUri.value = uri
     }
 
-    // Fungsi ini untuk membersihkan gambar yang dipilih,
-    // misalnya saat postingan berhasil dibuat atau dibatalkan.
     fun clearSelectedImage() {
         _selectedImageUri.value = null
     }
 
-    // --- AKHIR PENAMBAHAN FUNGSI UNTUK GAMBAR ---
+    // --- FUNGSI CRUD UNTUK POST ---
 
     private var postIdCounter = 0
 
-    // Fungsi addPost sekarang juga menerima URI gambar
+    // Fungsi addPost (Tidak ada perubahan)
     fun addPost(author: String, content: String, imageUri: Uri?) {
         val newPost = Post(
             id = postIdCounter++,
             author = author,
             timestamp = "Just now",
             content = content,
-            imageUri = imageUri // <-- Menyimpan URI gambar ke dalam data Post
+            imageUri = imageUri
         )
-
-        _posts.update { currentPosts ->
-            listOf(newPost) + currentPosts
-        }
-
-        // Setelah posting, bersihkan gambar yang dipilih
+        _posts.update { currentPosts -> listOf(newPost) + currentPosts }
         clearSelectedImage()
     }
 
+    // Fungsi deletePost (Tidak ada perubahan)
     fun deletePost(postId: Int) {
+        _posts.update { currentPosts -> currentPosts.filterNot { it.id == postId } }
+    }
+
+
+    // ✅ --- FUNGSI BARU UNTUK EDIT POST ---
+
+    /**
+     * Menyiapkan post yang akan diedit.
+     * Fungsi ini akan dipanggil dari AsisHubScreen sebelum navigasi.
+     */
+    fun selectPostForEditing(post: Post) {
+        _postToEdit.value = post
+        // Saat memilih post, langsung set gambarnya (jika ada) ke state gambar terpilih
+        // agar EditPostScreen bisa langsung menampilkannya.
+        onImageSelected(post.imageUri)
+    }
+
+    /**
+     * Memperbarui postingan yang ada dengan konten dan/atau gambar baru.
+     * Fungsi ini akan dipanggil dari EditPostScreen saat tombol 'Simpan' ditekan.
+     */
+    fun updatePost(updatedContent: String, newImageUri: Uri?) {
+        // Ambil post asli yang sedang kita edit dari state
+        val originalPost = _postToEdit.value ?: return
+
+        // Buat objek post yang sudah diperbarui menggunakan .copy()
+        val updatedPost = originalPost.copy(
+            content = updatedContent,
+            imageUri = newImageUri,
+            timestamp = "Edited" // Kita bisa tambahkan penanda bahwa post ini sudah diedit
+        )
+
+        // Cari post lama di dalam daftar `_posts` dan ganti dengan yang baru
         _posts.update { currentPosts ->
-            currentPosts.filterNot { it.id == postId }
+            currentPosts.map { post ->
+                if (post.id == originalPost.id) {
+                    updatedPost // Ini post yang kita edit, ganti dengan versi baru
+                } else {
+                    post // Ini post lain, biarkan apa adanya
+                }
+            }
         }
+
+        // Setelah selesai, bersihkan state editing
+        clearEditingState()
+    }
+
+    /**
+     * Membersihkan state editing setelah selesai, dibatalkan, atau kembali.
+     */
+    fun clearEditingState() {
+        _postToEdit.value = null
+        clearSelectedImage() // Sekalian bersihkan juga gambar yang dipilih
     }
 }
+

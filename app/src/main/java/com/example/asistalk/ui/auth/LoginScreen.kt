@@ -82,7 +82,7 @@ fun LoginScreen(
                 Image(
                     painter = painterResource(id = R.drawable.logo_asistalk_putih),
                     contentDescription = "Logo",
-                    modifier = Modifier.size(100.dp),
+                    modifier = Modifier.size(120.dp),
                     contentScale = ContentScale.Fit
                 )
                 Text(

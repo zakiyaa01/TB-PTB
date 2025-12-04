@@ -117,7 +117,10 @@ fun AsisHubScreen(
             PostCard(
                 post = post,
                 onClickPost = { navController.navigate("postDetail") },
-                onClickEdit = { navController.navigate("editPost") },
+                onClickEdit = {
+                    vm.selectPostForEditing(post)
+                    navController.navigate("editPost")
+                },
                 onClickDelete = {
                     postToDelete = post
                 }
