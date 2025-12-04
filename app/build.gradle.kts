@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation("androidx.navigation:navigation-compose:2.8.0-beta05")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
 
     // ✅ Retrofit untuk koneksi API
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

@@ -10,7 +10,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 
 @Composable
-fun EditPostScreen(navController: NavHostController /* Nanti tambahkan postId: String */) {
+fun EditPostScreen(navController: NavHostController,
+                   vm: AsisHubViewModel
+    ) {
     Column(
         Modifier
             .fillMaxSize()

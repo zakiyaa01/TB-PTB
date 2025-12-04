@@ -13,7 +13,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 
 @Composable
-fun PostDetailScreen(navController: NavHostController /* Nanti tambahkan postId: String */) {
+fun PostDetailScreen(navController: NavHostController,
+                     vm: AsisHubViewModel
+) {
     Column(modifier = Modifier.padding(16.dp)) {
         // Di sini Anda bisa menampilkan ulang PostCard asli
         Text("Detail Postingan", fontSize = 22.sp, fontWeight = FontWeight.Bold)
