@@ -22,6 +22,10 @@ import com.example.asistalk.ui.profile.ProfileScreen
 import com.example.asistalk.ui.asislearn.UploadMaterialScreen
 import com.example.asistalk.ui.asishub.AsisHubViewModel
 import androidx.compose.runtime.remember
+import com.example.asistalk.ui.profile.YourProfileScreen
+import com.example.asistalk.ui.profile.SettingsScreen
+import com.example.asistalk.ui.profile.AboutScreen
+
 import androidx.navigation.NavBackStackEntry
 
 
@@ -123,11 +127,23 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
                 EditPostScreen(navController = navController, vm = asisHubViewModel)
             }
-// composable("notif") tidak perlu diubah karena tidak menggunakan ViewModel
+            // composable("notif") tidak perlu diubah karena tidak menggunakan ViewModel
             composable("notif") {
                 NotificationScreen(navController = navController)
             }
+            // RUTE UNTUK HALAMAN PROFIL
 
+            composable(route = "yourProfile") {
+                YourProfileScreen(navController = navController)
+            }
+
+            composable(route = "settings") {
+                SettingsScreen(navController = navController)
+            }
+
+            composable(route = "about") {
+                AboutScreen(navController = navController)
+            }
         }
     }
 }
