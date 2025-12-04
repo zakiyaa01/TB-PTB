@@ -18,13 +18,13 @@ import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.graphics.SolidColor
-// import androidx.lifecycle.viewmodel.compose.viewModel // <-- DIHAPUS
+// Import AsisLearnViewModel dan MaterialItem (Asumsi sudah ada di package ini)
 
 // PENTING: Menerima ViewModel dari parameter, tidak membuatnya sendiri.
 @Composable
 fun AsisLearnScreen(
     navController: NavHostController,
-    viewModel: AsisLearnViewModel // <-- HAPUS = viewModel()
+    viewModel: AsisLearnViewModel
 ) {
 
     var selectedTab by remember { mutableStateOf(0) }
@@ -124,8 +124,6 @@ fun AsisLearnScreen(
     }
 }
 
-// HAPUS: Definisi MaterialItem di sini telah dihapus
-
 // Perbaikan: Tambahkan navController dan viewModel ke definisi fungsi
 @Composable
 fun MaterialCard(
@@ -175,9 +173,9 @@ fun MaterialCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
+                // PERBAIKAN: Hapus Hardcoded Text, Ganti dengan item.topic (Asumsi field telah ditambahkan)
                 Text(
-                    // PERHATIAN: Teks ini Hardcoded, mungkin perlu diperbaiki di masa mendatang
-                    text = "Modul Pertemuan 5: Material Design",
+                    text = item.topic.ifBlank { "Tidak ada topik" }, // Gunakan Topic dari ViewModel
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -203,10 +201,9 @@ fun MaterialCard(
             // Buttons
             Column(horizontalAlignment = Alignment.End) {
                 OutlinedButton(
-                    // Logika navigasi yang sudah Anda berikan, kini berfungsi
+                    // Logika navigasi ke LihatScreen (materialDetail)
                     onClick = {
                         viewModel.getMaterialByTitle(item.title)
-                        // Encoding judul diperlukan jika judul mengandung karakter seperti spasi, /, atau &.
                         val encodedTitle = java.net.URLEncoder.encode(item.title, "UTF-8")
                         navController.navigate("materialDetail/$encodedTitle")
                     },

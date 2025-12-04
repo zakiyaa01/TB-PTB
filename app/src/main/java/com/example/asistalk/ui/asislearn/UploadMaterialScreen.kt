@@ -15,14 +15,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+// import androidx.lifecycle.viewmodel.compose.viewModel // <-- Dihapus jika menggunakan NavGraph injection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UploadMaterialScreen(
     navController: NavHostController,
-    viewModel: AsisLearnViewModel = viewModel()
+    // Perbaikan: Asumsi ViewModel diinject dari NavGraph, bukan dibuat di sini.
+    viewModel: AsisLearnViewModel
 ) {
 
     val subject by viewModel.subject.collectAsState()
@@ -32,6 +33,10 @@ fun UploadMaterialScreen(
     val selectedFileUri by viewModel.selectedFileUri.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val uploadEvent by viewModel.uploadEvent.collectAsState()
+
+    // State untuk dropdown
+    var isExpanded by remember { mutableStateOf(false) }
+    val fileTypes = listOf("PDF", "Video", "Image", "Dokumen Lain") // Opsi tipe file
 
     // Trigger navigasi ketika upload berhasil
     LaunchedEffect(uploadEvent) {
@@ -114,12 +119,46 @@ fun UploadMaterialScreen(
                     )
                     Spacer(Modifier.height(12.dp))
 
-                    // FILE TYPE
+                    // FILE TYPE (DROPDOWN MENU)
                     LabelText("File Type")
-                    InputTextField(
-                        value = fileType,
-                        onValueChange = { viewModel.onFileTypeChange(it) }
-                    )
+                    ExposedDropdownMenuBox(
+                        expanded = isExpanded,
+                        onExpandedChange = { isExpanded = !isExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = fileType,
+                            onValueChange = {}, // Nilai hanya diubah melalui dropdown
+                            readOnly = true,
+                            modifier = Modifier
+                                .menuAnchor() // Tag untuk menu
+                                .fillMaxWidth(),
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                cursorColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = isExpanded,
+                            onDismissRequest = { isExpanded = false }
+                        ) {
+                            fileTypes.forEach { selectionOption ->
+                                DropdownMenuItem(
+                                    text = { Text(selectionOption) },
+                                    onClick = {
+                                        viewModel.onFileTypeChange(selectionOption)
+                                        isExpanded = false
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(12.dp))
 
                     // FILE PICKER
@@ -132,7 +171,6 @@ fun UploadMaterialScreen(
                                 MaterialTheme.colorScheme.surfaceVariant,
                                 RoundedCornerShape(12.dp)
                             )
-                            // PEMANGGILAN filePickerLauncher sekarang valid
                             .clickable { filePickerLauncher.launch("*/*") },
                         contentAlignment = Alignment.CenterStart
                     ) {

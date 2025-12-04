@@ -16,8 +16,8 @@ data class MaterialItem(
     val author: String,
     val icon: Int,
     val description: String = "",
-    val fileUri: String = "",
-    val topic: String = ""
+    val topic: String = "", // HARUS ADA
+    val fileUri: String = "" // HARUS ADA
 )
 
 class AsisLearnViewModel : ViewModel() {
@@ -29,10 +29,31 @@ class AsisLearnViewModel : ViewModel() {
     // --- STATE DAFTAR MATERI (SHARED STATE) ---
     private val _materials = MutableStateFlow(
         listOf(
-            // Data dummy awal
-            MaterialItem("Modul 5 Praktikum PTB", "PDF", "Alexander", R.drawable.ic_pdf),
-            MaterialItem("Database Praktikum", "Video", "Alexander", R.drawable.ic_video),
-            MaterialItem("Modul Rancang Bangun blabla", "Image", "Alexander", R.drawable.ic_image),
+            // Data dummy awal DIPERBARUI untuk menyertakan TOPIC dan FILE URI
+            MaterialItem(
+                title = "Modul 5 Praktikum PTB",
+                type = "PDF",
+                author = "Alexander",
+                icon = R.drawable.ic_pdf,
+                topic = "Modul Pertemuan 5: Material Design",
+                description = "Modul dasar untuk praktikum perancangan tampilan berbasis Android Compose."
+            ),
+            MaterialItem(
+                title = "Database Praktikum",
+                type = "Video",
+                author = "Alexander",
+                icon = R.drawable.ic_video,
+                topic = "Tutorial Dasar Penggunaan SQLite",
+                description = "Video panduan langkah demi langkah tentang integrasi database lokal."
+            ),
+            MaterialItem(
+                title = "Modul Rancang Bangun blabla",
+                type = "Image",
+                author = "Alexander",
+                icon = R.drawable.ic_image,
+                topic = "Diagram UML Proyek",
+                description = "Dokumen yang berisi diagram dan arsitektur proyek."
+            ),
         )
     )
     val materials = _materials.asStateFlow()
@@ -47,7 +68,7 @@ class AsisLearnViewModel : ViewModel() {
     }
 
     // ====================================================================
-    // 2. STATE INPUT UPLOAD (Dipindahkan ke sini agar rapi)
+    // 2. STATE INPUT UPLOAD
     // ====================================================================
 
     private val _subject = MutableStateFlow("")
@@ -72,7 +93,7 @@ class AsisLearnViewModel : ViewModel() {
     val uploadEvent = _uploadEvent.asStateFlow()
 
     // ====================================================================
-    // 3. UPDATE STATE FUNCTIONS (Dipindahkan ke sini agar rapi)
+    // 3. UPDATE STATE FUNCTIONS
     // ====================================================================
 
     fun onSubjectChange(value: String) { _subject.value = value }
@@ -83,7 +104,7 @@ class AsisLearnViewModel : ViewModel() {
     fun consumeUploadEvent() { _uploadEvent.value = null }
 
     // ====================================================================
-    // 4. UPLOAD FUNCTION (Hanya ada satu definisi yang lengkap)
+    // 4. UPLOAD FUNCTION (DIPERBAIKI)
     // ====================================================================
     fun uploadMaterial() {
         if (_subject.value.isBlank() || _topic.value.isBlank() || _selectedFileUri.value == null) {
@@ -106,13 +127,15 @@ class AsisLearnViewModel : ViewModel() {
             delay(2000)
 
             // Buat dan tambahkan materi baru ke daftar.
-            // PENTING: Deskripsi sekarang ikut ditambahkan.
+            // PERBAIKAN: Menyertakan TOPIC dan FILE URI dari input.
             val newMaterial = MaterialItem(
                 title = _subject.value,
                 type = _fileType.value,
                 author = "Anda", // Asumsi user yang upload
                 icon = iconRes,
-                description = _description.value // <-- MENGAMBIL DESKRIPSI INPUT
+                description = _description.value,
+                topic = _topic.value, // <-- MEMASTIKAN TOPIC DIISI
+                fileUri = _selectedFileUri.value.toString() // <-- MEMASTIKAN FILE URI DIISI
             )
 
             // Tambahkan materi baru di urutan teratas (membuat list baru)
