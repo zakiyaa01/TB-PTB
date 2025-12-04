@@ -18,9 +18,6 @@ import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.graphics.SolidColor
-// Import AsisLearnViewModel dan MaterialItem (Asumsi sudah ada di package ini)
-
-// PENTING: Menerima ViewModel dari parameter, tidak membuatnya sendiri.
 @Composable
 fun AsisLearnScreen(
     navController: NavHostController,
@@ -47,7 +44,10 @@ fun AsisLearnScreen(
         ) {
             TextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = {
+                    searchQuery = it
+                    viewModel.searchQuery (it)
+                },
                 placeholder = { Text("Search...") },
                 modifier = Modifier
                     .weight(1f)

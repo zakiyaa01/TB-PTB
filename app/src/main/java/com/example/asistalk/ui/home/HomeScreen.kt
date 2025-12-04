@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,26 +20,31 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.asistalk.R // Pastikan semua resource (R.drawable.ic_pdf, R.drawable.ic_image) ada
+import com.example.asistalk.R
+import com.example.asistalk.ui.asislearn.AsisLearnViewModel // Import ViewModel
+import com.example.asistalk.ui.asislearn.MaterialItem // Import Data Class
 
+// PENTING: HomeScreen harus menerima ViewModel
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(
+    navController: NavController,
+    // Asumsi ViewModel disuntikkan dari NavGraph (sama seperti AsisLearnScreen)
+    viewModel: AsisLearnViewModel
+) {
 
-    // --- Data Dummy Sesuai Mockup ---
-    val userName = "Suci Nurhaliza"
+    // --- Data Dinamis dari ViewModel ---
+    val userName = "Suci Nurhaliza" // Tetap dummy atau ambil dari User ViewModel
 
-    // Data New Material (menggambarkan materi dari AsisLearn)
-    val newMaterials = listOf(
-        MaterialCardData("Modul 5 Praktikum PTB", "Alexander", R.drawable.ic_pdf),
-        MaterialCardData("Modul 7 Praktikum PTB", "Alexander", R.drawable.ic_image),
-    )
+    // Ambil 2 materi terbaru dari daftar materi yang diupload (sudah diurutkan berdasarkan waktu upload)
+    val newMaterials by viewModel.materials.collectAsState()
+    val latestMaterials = newMaterials.take(2) // Ambil 2 yang terbaru
 
-    // Data Recent Post (menggambarkan postingan dari AsisHub)
+    // Data Recent Post (tetap dummy karena belum ada AsisHubViewModel)
     val recentPosts = listOf(
         PostData("Zakiya Aulia", "23115212029", "UTS MPSI tadi susah banget ga si? yang mau belajar takel buat besok, discord yuk!", R.drawable.ic_image, R.drawable.ic_image),
         PostData("Zakiya Aulia", "23115212029", "UTS MPSI tadi susah banget ga si? yang mau belajar takel buat besok, discord yuk!", R.drawable.ic_image, R.drawable.ic_image),
     )
-    // --- Akhir Data Dummy ---
+    // --- Akhir Data Dinamis ---
 
     LazyColumn(
         modifier = Modifier
@@ -62,11 +69,18 @@ fun HomeScreen(navController: NavController) {
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                newMaterials.forEach { material ->
+                // Perbaikan: Iterasi menggunakan data dari ViewModel
+                latestMaterials.forEach { material ->
                     NewMaterialCard(
-                        data = material,
+                        data = material, // Meneruskan MaterialItem
                         modifier = Modifier.weight(1f),
-                        onClick = { navController.navigate("asisLearn") } // Navigasi ke AsisLearn
+                        // Navigasi ke detail materi (LihatScreen)
+                        onClick = {
+                            // Lakukan seperti di AsisLearnScreen
+                            viewModel.getMaterialByTitle(material.title)
+                            val encodedTitle = java.net.URLEncoder.encode(material.title, "UTF-8")
+                            navController.navigate("materialDetail/$encodedTitle")
+                        }
                     )
                 }
             }
@@ -83,31 +97,25 @@ fun HomeScreen(navController: NavController) {
         items(recentPosts) { post ->
             RecentPostCard(
                 data = post,
-                onClick = { navController.navigate("asisHub") } // Navigasi ke AsisHub
+                onClick = { navController.navigate("asishub") } // Navigasi ke AsisHub (ganti rute jika perlu)
             )
             Spacer(modifier = Modifier.height(12.dp))
         }
 
         item {
-            Spacer(modifier = Modifier.height(80.dp)) // Padding bawah agar konten tidak tertutup Bottom Bar
+            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }
 
-// --- Helper Data Classes ---
-
-data class MaterialCardData(
-    val title: String,
-    val author: String,
-    val iconRes: Int // Resource ID untuk ikon (PDF/Image)
-)
+// --- Hapus MaterialCardData karena menggunakan MaterialItem dari ViewModel ---
 
 data class PostData(
     val author: String,
     val nim: String,
     val content: String,
     val profileImageRes: Int,
-    val attachedImageRes: Int // Untuk gambar postingan (UTS MPSI)
+    val attachedImageRes: Int
 )
 
 // --- Helper Composables ---
@@ -125,12 +133,13 @@ fun SectionTitle(title: String) {
 
 @Composable
 fun WelcomeHeader(userName: String, navController: NavController) {
-    // Container ungu sesuai mockup
+    // Container header
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer) // Warna ungu/gelap tema
+            // PERBAIKAN 1: BACKGROUND DIUBAH MENJADI SECONDARY
+            .background(MaterialTheme.colorScheme.secondary)
             .padding(horizontal = 16.dp)
             .padding(top = 16.dp, bottom = 24.dp)
     ) {
@@ -139,12 +148,13 @@ fun WelcomeHeader(userName: String, navController: NavController) {
                 text = "Wellcome!",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer // Warna teks terang
+                // Menggunakan onSecondary karena latar belakangnya Secondary
+                color = MaterialTheme.colorScheme.onSecondary
             )
             Text(
                 text = userName,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.8f)
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -154,25 +164,27 @@ fun WelcomeHeader(userName: String, navController: NavController) {
             ) {
                 // Tombol Mulai Diskusi -> AsisHubScreen
                 Button(
-                    onClick = { navController.navigate("asisHub") },
+                    onClick = { navController.navigate("asishub") },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
+                        // PERBAIKAN 2: CONTAINER DIUBAH MENJADI PRIMARY
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Mulai Diskusi", color = MaterialTheme.colorScheme.onSecondary)
+                    Text("Mulai Diskusi", color = MaterialTheme.colorScheme.onPrimary)
                 }
                 // Tombol Lihat Materi -> AsisLearnScreen
                 Button(
-                    onClick = { navController.navigate("asisLearn") },
+                    onClick = { navController.navigate("asislearn") },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiary
+                        // PERBAIKAN 3: CONTAINER DIUBAH MENJADI PRIMARY
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Lihat Materi", color = MaterialTheme.colorScheme.onTertiary)
+                    Text("Lihat Materi", color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }
@@ -180,13 +192,18 @@ fun WelcomeHeader(userName: String, navController: NavController) {
 }
 
 @Composable
-fun NewMaterialCard(data: MaterialCardData, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun NewMaterialCard(
+    data: MaterialItem, // Menerima MaterialItem dari ViewModel
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Card(
         modifier = modifier
-            .height(150.dp), // Ketinggian tetap
+            .height(150.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF13AF82) // Hijau terang sesuai mockup
+            // Perbaikan Warna: Menggunakan Secondary (Hijau yang Anda definisikan: 0xFF00D1B2)
+            containerColor = MaterialTheme.colorScheme.secondary
         ),
         onClick = onClick
     ) {
@@ -194,23 +211,23 @@ fun NewMaterialCard(data: MaterialCardData, modifier: Modifier = Modifier, onCli
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.Bottom // Taruh konten di bawah
+            verticalArrangement = Arrangement.Bottom
         ) {
-            // Icon Placeholder (diganti dengan icon yang sesuai)
+            // Icon Placeholder
             Icon(
-                painter = painterResource(id = data.iconRes),
+                painter = painterResource(id = data.icon), // Menggunakan icon dari MaterialItem
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(48.dp)
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                data.title,
+                data.title, // Judul dinamis
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
             Text(
-                data.author,
+                data.author, // Pengarang dinamis
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -225,7 +242,7 @@ fun RecentPostCard(data: PostData, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // Latar belakang putih tema
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(2.dp),
         onClick = onClick
     ) {
@@ -238,19 +255,21 @@ fun RecentPostCard(data: PostData, onClick: () -> Unit) {
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        // Menggunakan PrimaryLight (D2EEF7) sebagai latar belakang gambar profil
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                 )
                 Spacer(Modifier.width(8.dp))
                 Column {
                     Text(
                         data.author,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onBackground // DarkText
                     )
                     Text(
                         data.nim,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f) // GrayText
                     )
                 }
             }
@@ -271,7 +290,7 @@ fun RecentPostCard(data: PostData, onClick: () -> Unit) {
             Spacer(Modifier.height(8.dp))
 
             // Konten Post
-            Text(data.content)
+            Text(data.content, color = MaterialTheme.colorScheme.onBackground)
 
             Spacer(Modifier.height(8.dp))
 
@@ -280,12 +299,27 @@ fun RecentPostCard(data: PostData, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                // Di sini Anda bisa menambahkan IconButton untuk Like, Comment, Share
-                Icon(painter = painterResource(id = R.drawable.ic_image), contentDescription = "Like", modifier = Modifier.size(20.dp))
+                // Ikon menggunakan warna tema untuk konsistensi
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_image),
+                    contentDescription = "Like",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
                 Spacer(Modifier.width(12.dp))
-                Icon(painter = painterResource(id = R.drawable.ic_image), contentDescription = "Comment", modifier = Modifier.size(20.dp))
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_image),
+                    contentDescription = "Comment",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
                 Spacer(Modifier.width(12.dp))
-                Icon(painter = painterResource(id = R.drawable.ic_image), contentDescription = "Share", modifier = Modifier.size(20.dp))
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_image),
+                    contentDescription = "Share",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
             }
         }
     }
