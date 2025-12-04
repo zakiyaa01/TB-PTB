@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items // <-- PENTING: import 'items' untuk daftar dinamis
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel // <-- PENTING: Import untuk ViewModel
 import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import com.example.asistalk.ui.asishub.components.DeleteConfirmationDialog
@@ -30,19 +32,22 @@ import com.example.asistalk.ui.asishub.components.DeleteConfirmationDialog
 // MAIN SCREEN – ASISHUB
 // =============================================================
 @Composable
-fun AsisHubScreen(navController: NavHostController) {
+fun AsisHubScreen(
+    navController: NavHostController,
+    vm: AsisHubViewModel
+) {
+    // Ambil daftar postingan dari ViewModel dan ubah menjadi state yang bisa diamati oleh UI
+    val posts by vm.posts.collectAsState()
 
-    // --- PERUBAHAN 1: State untuk mengontrol dialog ---
-    // Menyimpan ID atau informasi postingan yang akan dihapus
-    var postToDelete by remember { mutableStateOf<String?>(null) }
+    // State untuk mengontrol dialog konfirmasi hapus
+    var postToDelete by remember { mutableStateOf<Post?>(null) }
 
     // Tampilkan dialog jika postToDelete tidak null
-    if (postToDelete != null) {
+    postToDelete?.let { post ->
         DeleteConfirmationDialog(
             onConfirm = {
-                // Di sini Anda akan menambahkan logika untuk benar-benar menghapus postingan
-                // Misalnya: viewModel.deletePost(postToDelete)
-                println("Postingan ${postToDelete} dihapus!") // Placeholder
+                // Panggil fungsi delete dari ViewModel
+                vm.deletePost(post.id)
                 postToDelete = null // Tutup dialog setelah konfirmasi
             },
             onDismiss = {
@@ -55,7 +60,8 @@ fun AsisHubScreen(navController: NavHostController) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp) // Memberi jarak antar postingan
     ) {
         // --- HEADER ---
         item {
@@ -63,7 +69,7 @@ fun AsisHubScreen(navController: NavHostController) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp) // Beri padding vertikal
+                    .padding(vertical = 16.dp)
             ) {
                 Image(
                     painter = painterResource(R.drawable.ic_launcher_foreground),
@@ -78,16 +84,13 @@ fun AsisHubScreen(navController: NavHostController) {
                     color = Color(0xFF2098D1)
                 )
                 Spacer(modifier = Modifier.weight(1f))
-
                 Icon(
                     painter = painterResource(R.drawable.ic_notification),
                     contentDescription = "Notif",
                     tint = Color.Black,
                     modifier = Modifier
                         .size(28.dp)
-                        .clickable {
-                            navController.navigate("notif")
-                        }
+                        .clickable { navController.navigate("notif") }
                 )
             }
         }
@@ -97,41 +100,18 @@ fun AsisHubScreen(navController: NavHostController) {
             PostInputBox(onClick = {
                 navController.navigate("createPost")
             })
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // --- POST LIST ---
-        item {
+        // --- POST LIST (PERUBAHAN UTAMA) ---
+        // Ganti dari beberapa `item` statis menjadi satu `items` dinamis
+        items(posts, key = { it.id }) { post ->
             PostCard(
-                // --- PERUBAHAN 2: Memberi ID unik untuk setiap post ---
-                postId = "post_1",
-                name = "Zakiya Aulia",
-                time = "2 hours ago",
-                content = "Tutorial lengkap instalasi Ubuntu Server…",
-                comments = 2,
-                hasMedia = true,
+                post = post, // Kirim seluruh objek Post
                 onClickPost = { navController.navigate("postDetail") },
                 onClickEdit = { navController.navigate("editPost") },
-                onClickDelete = { postId ->
-                    // Set state dengan ID postingan yang ingin dihapus
-                    postToDelete = postId
-                }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        item {
-            PostCard(
-                postId = "post_2",
-                name = "Suci Nurhaliza",
-                time = "5 hours ago",
-                content = "Halo semuanya! Ada yang tau cara mengatasi error…",
-                comments = 1,
-                hasMedia = false,
-                onClickPost = { navController.navigate("postDetail") },
-                onClickEdit = { navController.navigate("editPost") },
-                onClickDelete = { postId ->
-                    postToDelete = postId
+                onClickDelete = {
+                    // Set state dengan objek Post yang ingin dihapus
+                    postToDelete = post
                 }
             )
         }
@@ -147,7 +127,7 @@ fun PostInputBox(onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp)
+            .padding(vertical = 4.dp)
             .background(Color(0xFFDBF3FF), RoundedCornerShape(20.dp))
             .padding(14.dp)
             .clickable { onClick() },
@@ -162,9 +142,7 @@ fun PostInputBox(onClick: () -> Unit) {
         ) {
             Text("Z", color = Color.White, fontWeight = FontWeight.Bold)
         }
-
         Spacer(modifier = Modifier.width(10.dp))
-
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -175,9 +153,7 @@ fun PostInputBox(onClick: () -> Unit) {
         ) {
             Text("Apa yang ingin anda diskusikan?", color = Color.Gray)
         }
-
         Spacer(modifier = Modifier.width(10.dp))
-
         Icon(
             painter = painterResource(R.drawable.ic_camera),
             contentDescription = "Camera",
@@ -187,22 +163,15 @@ fun PostInputBox(onClick: () -> Unit) {
 }
 
 // =============================================================
-// POST CARD
+// POST CARD (Sekarang menerima objek 'Post')
 // =============================================================
 @Composable
 fun PostCard(
-    postId: String, // <-- Parameter baru untuk identifikasi
-    name: String,
-    time: String,
-    content: String,
-    comments: Int,
-    hasMedia: Boolean,
+    post: Post, // <-- Terima satu objek Post
     onClickPost: () -> Unit,
     onClickEdit: () -> Unit,
-    // --- PERUBAHAN 3: onClickDelete sekarang memberikan ID kembali ---
-    onClickDelete: (String) -> Unit
+    onClickDelete: () -> Unit
 ) {
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -220,29 +189,22 @@ fun PostCard(
                         .background(Color(0xFF3A57E8)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(name.first().toString(), color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(post.author.first().toString(), color = Color.White, fontWeight = FontWeight.Bold)
                 }
-
                 Spacer(modifier = Modifier.width(10.dp))
-
                 Column {
-                    Text(name, fontWeight = FontWeight.Bold)
-                    Text(time, fontSize = 12.sp, color = Color.Gray)
+                    Text(post.author, fontWeight = FontWeight.Bold)
+                    Text(post.timestamp, fontSize = 12.sp, color = Color.Gray)
                 }
-
                 Spacer(modifier = Modifier.weight(1f))
-
                 DropdownMenuButton(
                     onEdit = onClickEdit,
-                    // Memanggil onClickDelete dengan postId saat tombol di menu diklik
-                    onDelete = { onClickDelete(postId) }
+                    onDelete = onClickDelete // Teruskan fungsi delete
                 )
             }
-
             Spacer(modifier = Modifier.height(10.dp))
-            Text(content, fontSize = 14.sp)
-
-            if (hasMedia) {
+            Text(post.content, fontSize = 14.sp)
+            if (post.hasMedia) {
                 Spacer(modifier = Modifier.height(14.dp))
                 Box(
                     modifier = Modifier
@@ -258,12 +220,10 @@ fun PostCard(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(10.dp))
             Divider(thickness = 1.dp, color = Color(0xFFEAEAEA))
-
             Text(
-                "$comments Comments",
+                "${post.commentsCount} Comments",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
@@ -276,7 +236,7 @@ fun PostCard(
 }
 
 // =============================================================
-// DROP DOWN MENU
+// DROP DOWN MENU (Tidak ada perubahan)
 // =============================================================
 @Composable
 fun DropdownMenuButton(
@@ -293,7 +253,6 @@ fun DropdownMenuButton(
                 .padding(start = 10.dp)
                 .clickable { expanded = true }
         )
-
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
