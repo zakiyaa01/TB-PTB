@@ -18,25 +18,27 @@ import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.graphics.SolidColor
+import androidx.lifecycle.viewmodel.compose.viewModel // Diperlukan untuk viewModel()
 
+// PENTING: Menggunakan ViewModel untuk data
 @Composable
-fun AsisLearnScreen(navController: NavHostController) {
+fun AsisLearnScreen(
+    navController: NavHostController,
+    viewModel: AsisLearnViewModel = viewModel() // Inject ViewModel
+) {
 
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("All", "My Material", "Download")
     var searchQuery by remember { mutableStateOf("") }
 
-    val materials = listOf(
-        MaterialItem("Modul 5 Praktikum PTB", "PDF", "Alexander", R.drawable.ic_pdf),
-        MaterialItem("Database Praktikum", "Video", "Alexander", R.drawable.ic_video),
-        MaterialItem("Modul Rancang Bangun blabla", "Image", "Alexander", R.drawable.ic_image),
-    )
+    // Ambil data materi dari ViewModel
+    val materials by viewModel.materials.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .background(MaterialTheme.colorScheme.background) // Tambahkan background agar terlihat jelas
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Search + Upload Button
         Row(
@@ -113,6 +115,7 @@ fun AsisLearnScreen(navController: NavHostController) {
         LazyColumn(
             modifier = Modifier.fillMaxSize()
         ) {
+            // Gunakan `materials` dari ViewModel
             items(materials) { item ->
                 MaterialCard(item)
                 Spacer(Modifier.height(12.dp))
@@ -121,12 +124,8 @@ fun AsisLearnScreen(navController: NavHostController) {
     }
 }
 
-data class MaterialItem(
-    val title: String,
-    val type: String,
-    val author: String,
-    val icon: Int
-)
+// HAPUS: Definisi MaterialItem di sini telah dihapus
+// agar konsisten dengan MaterialItem yang diimpor dari ViewModel
 
 @Composable
 fun MaterialCard(item: MaterialItem) {
@@ -173,6 +172,7 @@ fun MaterialCard(item: MaterialItem) {
                 )
 
                 Text(
+                    // PERHATIAN: Teks ini Hardcoded, mungkin perlu diperbaiki di masa mendatang
                     text = "Modul Pertemuan 5: Material Design",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -217,7 +217,7 @@ fun MaterialCard(item: MaterialItem) {
                 IconButton(
                     onClick = {},
                     colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary // Menggunakan warna tema
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(

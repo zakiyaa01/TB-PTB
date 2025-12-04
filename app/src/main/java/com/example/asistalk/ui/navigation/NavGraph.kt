@@ -21,9 +21,9 @@ import com.example.asistalk.ui.home.HomeScreen
 import com.example.asistalk.ui.profile.ProfileScreen
 import com.example.asistalk.ui.asislearn.UploadMaterialScreen
 import com.example.asistalk.ui.asishub.AsisHubViewModel
+import com.example.asistalk.ui.asislearn.AsisLearnViewModel // <-- IMPOR TAMBAHAN PENTING
 import androidx.compose.runtime.remember
 import androidx.navigation.NavBackStackEntry
-
 
 @Composable
 fun NavGraph(
@@ -69,7 +69,6 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
     }
 }
 
-// FUNGSI INI SEKARANG MENJADI NAVHOST UNTUK KONTEN UTAMA
 @Composable
 fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
     NavHost(
@@ -81,23 +80,52 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         composable("home") { HomeScreen(navController = navController) }
         composable("profile") { ProfileScreen(navController = navController) }
 
-        // --- Rute untuk AsisLearn dan halaman detailnya ---
-        composable("asislearn") { AsisLearnScreen(navController = navController) }
-        composable("uploadMaterial") { UploadMaterialScreen(navController = navController) } // Daftarkan rute upload di sini
 
-        // --- BUAT GRAFIK BERSARANG UNTUK ASISHUB AGAR BERBAGI VIEWMODEL ---
+        // =================================================================
+        // PERBAIKAN: GRAFIK BERSARANG UNTUK ASISLEARN AGAR BERBAGI VIEWMODEL
+        // =================================================================
+        navigation(
+            startDestination = "asislearn_main",
+            route = "asislearn" // Rute ini yang dipanggil oleh Bottom Bar
+        ) {
+
+            // 1. ASISLEARNSCREEN (Daftar Materi)
+            composable("asislearn_main") { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("asislearn")
+                }
+                // Menggunakan ViewModel yang terikat pada scope "asislearn" (Instance Tunggal)
+                val asisLearnViewModel: AsisLearnViewModel = viewModel(parentEntry)
+
+                // MEMASUKKAN VIEWMODEL KE DALAM COMPOSABLE
+                AsisLearnScreen(navController = navController, viewModel = asisLearnViewModel)
+            }
+
+            // 2. UPLOADMATERIALSCREEN (Form Upload)
+            composable("uploadMaterial") { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("asislearn")
+                }
+                // Menggunakan ViewModel yang SAMA
+                val asisLearnViewModel: AsisLearnViewModel = viewModel(parentEntry)
+
+                // MEMASUKKAN VIEWMODEL KE DALAM COMPOSABLE
+                UploadMaterialScreen(navController = navController, viewModel = asisLearnViewModel)
+            }
+        }
+
+        // =================================================================
+        // GRAFIK BERSARANG UNTUK ASISHUB (Sudah Benar)
+        // =================================================================
         navigation(
             startDestination = "asishub_main", // Layar utama di dalam grup AsisHub
             route = "asishub" // Rute ini yang dipanggil oleh Bottom Bar
         ) {
 
-            // --- PERBAIKAN ---
             composable("asishub_main") { backStackEntry ->
-                // Dapatkan NavBackStackEntry dari grafik induk ("asishub")
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("asishub")
                 }
-                // Buat ViewModel yang terikat pada grafik induk tersebut
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
 
                 AsisHubScreen(navController = navController, vm = asisHubViewModel)
@@ -123,7 +151,6 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
                 EditPostScreen(navController = navController, vm = asisHubViewModel)
             }
-// composable("notif") tidak perlu diubah karena tidak menggunakan ViewModel
             composable("notif") {
                 NotificationScreen(navController = navController)
             }
@@ -136,4 +163,3 @@ object Graph {
     const val AUTHENTICATION = "auth_graph"
     const val MAIN = "main_graph"
 }
-
