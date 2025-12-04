@@ -27,7 +27,6 @@ class AsisLearnViewModel : ViewModel() {
     // ====================================================================
 
     // --- STATE DAFTAR MATERI UTAMA (Data Master) ---
-    // Gunakan MutableList untuk memudahkan penambahan data setelah upload
     private val _allMaterials = mutableListOf(
         MaterialItem(
             title = "Modul 5 Praktikum PTB",
@@ -64,30 +63,41 @@ class AsisLearnViewModel : ViewModel() {
     val selectedMaterial = _selectedMaterial.asStateFlow()
 
     fun getMaterialByTitle(title: String) {
-        // Cari di daftar yang saat ini ditampilkan
         val material = _materials.value.find { it.title == title }
         _selectedMaterial.value = material
     }
 
     // ====================================================================
-    // 2. FUNGSI PENCARIAN BARU
+    // 2. FUNGSI FILTERING BARU (Menggantikan searchQuery)
     // ====================================================================
 
     /**
-     * Memfilter daftar materi berdasarkan judul atau topik.
+     * Memfilter daftar materi berdasarkan query pencarian dan tab yang dipilih.
+     * @param query Teks pencarian
+     * @param selectedTab Indeks tab: 0=All, 1=My Material, 2=Download
      */
-    fun searchQuery(query: String) {
+    fun filterMaterials(query: String, selectedTab: Int) {
         val normalizedQuery = query.trim().lowercase()
-        if (normalizedQuery.isBlank()) {
-            // Jika kosong, tampilkan semua materi dari master list
-            _materials.value = _allMaterials.toList()
-        } else {
-            // Filter materi dari master list
-            _materials.value = _allMaterials.filter { item ->
+        var filteredList: List<MaterialItem> = _allMaterials
+
+        // 1. FILTER BERDASARKAN TAB
+        filteredList = when (selectedTab) {
+            0 -> _allMaterials.toList() // ALL: Tampilkan semua
+            // MY MATERIAL: Filter yang authornya 'Anda' (Asumsi user yang upload)
+            1 -> _allMaterials.filter { it.author == "Anda" }
+            2 -> emptyList() // DOWNLOAD: Placeholder untuk materi yang diunduh
+            else -> _allMaterials.toList()
+        }
+
+        // 2. FILTER BERDASARKAN PENCARIAN (diaplikasikan pada hasil filter tab)
+        if (normalizedQuery.isNotBlank()) {
+            filteredList = filteredList.filter { item ->
                 item.title.lowercase().contains(normalizedQuery) ||
                         item.topic.lowercase().contains(normalizedQuery)
             }
         }
+
+        _materials.value = filteredList
     }
 
     // ====================================================================
@@ -127,9 +137,10 @@ class AsisLearnViewModel : ViewModel() {
     fun consumeUploadEvent() { _uploadEvent.value = null }
 
     // ====================================================================
-    // 5. UPLOAD FUNCTION (DIPERBAIKI)
+    // 5. UPLOAD FUNCTION (Diperbarui untuk memanggil filterMaterials)
     // ====================================================================
     fun uploadMaterial() {
+        // ... (validasi)
         if (_subject.value.isBlank() || _topic.value.isBlank() || _selectedFileUri.value == null) {
             _uploadEvent.value = false
             return
@@ -158,10 +169,11 @@ class AsisLearnViewModel : ViewModel() {
             )
 
             // 1. Tambahkan materi baru ke daftar master (_allMaterials)
-            _allMaterials.add(0, newMaterial) // Tambahkan di posisi terdepan
+            _allMaterials.add(0, newMaterial)
 
-            // 2. Perbarui state _materials (yang ditampilkan di UI)
-            _materials.value = _allMaterials.toList()
+            // 2. Perbarui state _materials.
+            // Setelah upload, kita paksa tampilkan tab ALL (indeks 0) tanpa query pencarian.
+            filterMaterials("", 0)
 
             // Reset field input
             _subject.value = ""

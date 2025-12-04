@@ -18,6 +18,7 @@ import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.graphics.SolidColor
+
 @Composable
 fun AsisLearnScreen(
     navController: NavHostController,
@@ -28,7 +29,13 @@ fun AsisLearnScreen(
     val tabs = listOf("All", "My Material", "Download")
     var searchQuery by remember { mutableStateOf("") }
 
-    // Ambil data materi dari ViewModel
+    // Efek Samping: Panggil fungsi filter di ViewModel setiap kali
+    // searchQuery ATAU selectedTab berubah.
+    LaunchedEffect(selectedTab, searchQuery) {
+        viewModel.filterMaterials(searchQuery, selectedTab)
+    }
+
+    // Ambil data materi dari ViewModel (sudah terfilter)
     val materials by viewModel.materials.collectAsState()
 
     Column(
@@ -46,7 +53,8 @@ fun AsisLearnScreen(
                 value = searchQuery,
                 onValueChange = {
                     searchQuery = it
-                    viewModel.searchQuery (it)
+                    // Hapus: viewModel.searchQuery(it)
+                    // Fungsi filter sudah dihandle oleh LaunchedEffect
                 },
                 placeholder = { Text("Search...") },
                 modifier = Modifier
@@ -97,7 +105,9 @@ fun AsisLearnScreen(
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
-                    onClick = { selectedTab = index },
+                    onClick = {
+                        selectedTab = index // Memperbarui selectedTab akan memicu LaunchedEffect
+                    },
                     text = {
                         Text(
                             title,
@@ -111,11 +121,10 @@ fun AsisLearnScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // List materials
+        // List materials (secara reaktif menampilkan hasil filter)
         LazyColumn(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Perbaikan: Teruskan navController dan viewModel ke MaterialCard
             items(materials) { item ->
                 MaterialCard(item, navController, viewModel)
                 Spacer(Modifier.height(12.dp))
@@ -124,7 +133,7 @@ fun AsisLearnScreen(
     }
 }
 
-// Perbaikan: Tambahkan navController dan viewModel ke definisi fungsi
+// MaterialCard (Tidak Perlu Diubah)
 @Composable
 fun MaterialCard(
     item: MaterialItem,
@@ -173,7 +182,6 @@ fun MaterialCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // PERBAIKAN: Hapus Hardcoded Text, Ganti dengan item.topic (Asumsi field telah ditambahkan)
                 Text(
                     text = item.topic.ifBlank { "Tidak ada topik" }, // Gunakan Topic dari ViewModel
                     style = MaterialTheme.typography.bodySmall,
@@ -228,7 +236,7 @@ fun MaterialCard(
                     )
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_download), // Pastikan resource ini ada
+                        painter = painterResource(id = R.drawable.ic_download),
                         contentDescription = "Download",
                         modifier = Modifier.size(24.dp)
                     )
