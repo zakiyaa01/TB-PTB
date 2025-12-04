@@ -18,6 +18,7 @@ import com.example.asistalk.ui.auth.LoginScreen
 import com.example.asistalk.ui.auth.RegisterScreen
 import com.example.asistalk.ui.home.HomeScreen
 import com.example.asistalk.ui.profile.ProfileScreen
+import com.example.asistalk.ui.asislearn.UploadMaterialScreen
 
 @Composable
 fun NavGraph(
@@ -73,17 +74,12 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         startDestination = "home",
         modifier = modifier
     ) {
-        // Rute untuk Bottom Navigation Bar
+        // --- PERBAIKAN UTAMA ADA DI SINI ---
+        // Teruskan 'navController' ke SETIAP fungsi layar
         composable("home") { HomeScreen(navController = navController) }
         composable("asishub") { AsisHubScreen(navController = navController) }
         composable("asislearn") { AsisLearnScreen(navController = navController) }
         composable("profile") { ProfileScreen(navController = navController) }
-
-        // Rute AsisHub
-        composable("createPost") { CreatePostScreen(navController = navController) }
-        composable("editPost") { EditPostScreen(navController = navController) }
-        composable("postDetail") { PostDetailScreen(navController = navController) }
-        composable("notif") { NotificationScreen(navController = navController) }
     }
 }
 
