@@ -23,42 +23,64 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// import androidx.navigation.NavController // <-- HAPUS IMPORT INI
 import com.example.asistalk.R
+import com.example.asistalk.UserPreferencesRepository // <-- IMPORT BARU
 import com.example.asistalk.network.LoginRequest
 import com.example.asistalk.network.RetrofitClient
 import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    // --- PERBAIKAN DI SINI ---
     onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit // Tambahkan parameter ini
+    onNavigateToRegister: () -> Unit
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
-    // Menggunakan coroutine scope yang terikat pada siklus hidup Composable
+    // State untuk Checkbox "Remember Me"
+    var rememberMe by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // instance dari repository preferensi kita
+    val userPrefsRepo = remember { UserPreferencesRepository(context) }
+
+    // Ambil data yang tersimpan dari DataStore
+    // LaunchedEffect akan berjalan sekali saat layar dibuka
+    LaunchedEffect(key1 = Unit) {
+        // Ambil nilai awal untuk checkbox dan field login
+        userPrefsRepo.rememberMeFlow.collect { isRemembered ->
+            rememberMe = isRemembered
+            if (isRemembered) {
+                userPrefsRepo.savedUsernameFlow.collect { savedUsername ->
+                    username = savedUsername
+                }
+                userPrefsRepo.savedPasswordFlow.collect { savedPassword ->
+                    password = savedPassword
+                }
+            }
+        }
+    }
+
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Bagian hijau atas dengan lengkungan
+        // Bagian hijau atas (tidak berubah)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(260.dp)
                 .background(
-                    color = Color(0xFF00BFA6), // warna hijau toska
+                    color = Color(0xFF00BFA6),
                     shape = RoundedCornerShape(bottomStart = 100.dp, bottomEnd = 100.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    painter = painterResource(id = R.drawable.logo_asistalk_putih),
                     contentDescription = "Logo",
                     modifier = Modifier.size(100.dp),
                     contentScale = ContentScale.Fit
@@ -100,7 +122,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                enabled = !isLoading // Nonaktifkan saat loading
+                enabled = !isLoading
             )
 
             OutlinedTextField(
@@ -111,7 +133,7 @@ fun LoginScreen(
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                enabled = !isLoading // Nonaktifkan saat loading
+                enabled = !isLoading
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -121,8 +143,15 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = false, onCheckedChange = {})
+                // Hubungkan Checkbox dengan state 'rememberMe'
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { rememberMe = !rememberMe } // Buat seluruh baris bisa diklik
+                ) {
+                    Checkbox(
+                        checked = rememberMe,
+                        onCheckedChange = { isChecked -> rememberMe = isChecked }
+                    )
                     Text("Remember me", fontSize = 13.sp)
                 }
                 Text(
@@ -141,26 +170,23 @@ fun LoginScreen(
                         return@Button
                     }
 
-                    isLoading = true // Mulai proses loading
-                    // Jalankan pemanggilan API di dalam coroutine
+                    isLoading = true
                     scope.launch {
                         try {
+                            // Simpan kredensial sebelum login
+                            userPrefsRepo.saveLoginCredentials(username, password, rememberMe)
+
                             val request = LoginRequest(username, password)
-                            // Panggil suspend function secara langsung
                             val response = RetrofitClient.instance.loginUser(request)
 
                             if (response.success) {
-                                // Jika berhasil, panggil callback untuk navigasi
                                 onLoginSuccess()
                             } else {
-                                // Tampilkan pesan error dari server
                                 Toast.makeText(context, response.message ?: "Login gagal", Toast.LENGTH_SHORT).show()
                             }
                         } catch (e: Exception) {
-                            // Tangani error jaringan (mis. tidak ada internet, server mati)
                             Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
                         } finally {
-                            // Selalu hentikan loading setelah selesai
                             isLoading = false
                         }
                     }
@@ -170,10 +196,9 @@ fun LoginScreen(
                     .height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFA6)),
                 shape = RoundedCornerShape(24.dp),
-                enabled = !isLoading // Tombol tidak bisa diklik saat loading
+                enabled = !isLoading
             ) {
                 if (isLoading) {
-                    // Tampilkan loading indicator di dalam tombol
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = Color.White,
@@ -192,8 +217,7 @@ fun LoginScreen(
                     text = "Sign Up",
                     color = Color(0xFF00BFA6),
                     fontWeight = FontWeight.Bold,
-                    // --- PERBAIKAN DI SINI ---
-                    modifier = Modifier.clickable { onNavigateToRegister() } // Panggil callback
+                    modifier = Modifier.clickable { onNavigateToRegister() }
                 )
             }
         }
