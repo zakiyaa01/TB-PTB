@@ -52,6 +52,11 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("androidx.navigation:navigation-compose:2.8.0-beta05")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("androidx.activity:activity-ktx:1.11.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.8")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.3")
 
     // ✅ Retrofit untuk koneksi API
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
