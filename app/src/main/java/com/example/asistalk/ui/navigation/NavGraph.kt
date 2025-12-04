@@ -24,6 +24,9 @@ import com.example.asistalk.ui.asishub.AsisHubViewModel
 import com.example.asistalk.ui.asislearn.AsisLearnViewModel // <-- IMPOR TAMBAHAN PENTING
 import androidx.compose.runtime.remember
 import androidx.navigation.NavBackStackEntry
+import com.example.asistalk.ui.asislearn.LihatScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 @Composable
 fun NavGraph(
@@ -112,7 +115,30 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                 // MEMASUKKAN VIEWMODEL KE DALAM COMPOSABLE
                 UploadMaterialScreen(navController = navController, viewModel = asisLearnViewModel)
             }
+
+            // 3. LIHATSCREEN / DETAIL MATERI (Menampilkan detail)
+            composable(
+                route = "materialDetail/{materialTitle}", // Rute dengan argumen
+                arguments = listOf(navArgument("materialTitle") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("asislearn")
+                }
+                // Menggunakan ViewModel yang SAMA
+                val asisLearnViewModel: AsisLearnViewModel = viewModel(parentEntry)
+
+                // Mengambil argumen judul
+                val materialTitle = backStackEntry.arguments?.getString("materialTitle") ?: ""
+
+                // MEMASUKKAN VIEWMODEL DAN ARGUMEN KE DALAM COMPOSABLE
+                LihatScreen(
+                    navController = navController,
+                    viewModel = asisLearnViewModel,
+                    materialTitle = materialTitle
+                )
+            }
         }
+
 
         // =================================================================
         // GRAFIK BERSARANG UNTUK ASISHUB (Sudah Benar)

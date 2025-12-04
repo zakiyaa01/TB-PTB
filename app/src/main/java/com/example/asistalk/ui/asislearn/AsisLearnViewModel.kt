@@ -14,10 +14,17 @@ data class MaterialItem(
     val title: String,
     val type: String,
     val author: String,
-    val icon: Int
+    val icon: Int,
+    val description: String = "",
+    val fileUri: String = "",
+    val topic: String = ""
 )
 
 class AsisLearnViewModel : ViewModel() {
+
+    // ====================================================================
+    // 1. STATE BERSAMA (DAFTAR & DETAIL)
+    // ====================================================================
 
     // --- STATE DAFTAR MATERI (SHARED STATE) ---
     private val _materials = MutableStateFlow(
@@ -30,7 +37,19 @@ class AsisLearnViewModel : ViewModel() {
     )
     val materials = _materials.asStateFlow()
 
-    // --- STATE INPUT UPLOAD ---
+    // --- STATE DETAIL MATERI ---
+    private val _selectedMaterial = MutableStateFlow<MaterialItem?>(null)
+    val selectedMaterial = _selectedMaterial.asStateFlow()
+
+    fun getMaterialByTitle(title: String) {
+        val material = _materials.value.find { it.title == title }
+        _selectedMaterial.value = material
+    }
+
+    // ====================================================================
+    // 2. STATE INPUT UPLOAD (Dipindahkan ke sini agar rapi)
+    // ====================================================================
+
     private val _subject = MutableStateFlow("")
     val subject = _subject.asStateFlow()
 
@@ -49,11 +68,13 @@ class AsisLearnViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
-    // Menggunakan Boolean untuk menandakan sukses/gagal
     private val _uploadEvent = MutableStateFlow<Boolean?>(null)
     val uploadEvent = _uploadEvent.asStateFlow()
 
-    // --- UPDATE STATE FUNCTIONS ---
+    // ====================================================================
+    // 3. UPDATE STATE FUNCTIONS (Dipindahkan ke sini agar rapi)
+    // ====================================================================
+
     fun onSubjectChange(value: String) { _subject.value = value }
     fun onTopicChange(value: String) { _topic.value = value }
     fun onDescriptionChange(value: String) { _description.value = value }
@@ -61,10 +82,12 @@ class AsisLearnViewModel : ViewModel() {
     fun onFileSelected(uri: Uri?) { _selectedFileUri.value = uri }
     fun consumeUploadEvent() { _uploadEvent.value = null }
 
-    // --- UPLOAD FUNCTION ---
+    // ====================================================================
+    // 4. UPLOAD FUNCTION (Hanya ada satu definisi yang lengkap)
+    // ====================================================================
     fun uploadMaterial() {
         if (_subject.value.isBlank() || _topic.value.isBlank() || _selectedFileUri.value == null) {
-            _uploadEvent.value = false // Upload gagal: field kosong
+            _uploadEvent.value = false
             return
         }
 
@@ -82,12 +105,14 @@ class AsisLearnViewModel : ViewModel() {
             // SIMULASI UPLOAD
             delay(2000)
 
-            // Buat dan tambahkan materi baru ke daftar
+            // Buat dan tambahkan materi baru ke daftar.
+            // PENTING: Deskripsi sekarang ikut ditambahkan.
             val newMaterial = MaterialItem(
                 title = _subject.value,
                 type = _fileType.value,
                 author = "Anda", // Asumsi user yang upload
-                icon = iconRes
+                icon = iconRes,
+                description = _description.value // <-- MENGAMBIL DESKRIPSI INPUT
             )
 
             // Tambahkan materi baru di urutan teratas (membuat list baru)
@@ -100,7 +125,7 @@ class AsisLearnViewModel : ViewModel() {
             _selectedFileUri.value = null
 
             _isLoading.value = false
-            _uploadEvent.value = true // Upload sukses
+            _uploadEvent.value = true
         }
     }
 }

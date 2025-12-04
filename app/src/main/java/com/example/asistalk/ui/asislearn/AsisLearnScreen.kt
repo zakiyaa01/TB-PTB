@@ -18,13 +18,13 @@ import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.graphics.SolidColor
-import androidx.lifecycle.viewmodel.compose.viewModel // Diperlukan untuk viewModel()
+// import androidx.lifecycle.viewmodel.compose.viewModel // <-- DIHAPUS
 
-// PENTING: Menggunakan ViewModel untuk data
+// PENTING: Menerima ViewModel dari parameter, tidak membuatnya sendiri.
 @Composable
 fun AsisLearnScreen(
     navController: NavHostController,
-    viewModel: AsisLearnViewModel = viewModel() // Inject ViewModel
+    viewModel: AsisLearnViewModel // <-- HAPUS = viewModel()
 ) {
 
     var selectedTab by remember { mutableStateOf(0) }
@@ -115,9 +115,9 @@ fun AsisLearnScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Gunakan `materials` dari ViewModel
+            // Perbaikan: Teruskan navController dan viewModel ke MaterialCard
             items(materials) { item ->
-                MaterialCard(item)
+                MaterialCard(item, navController, viewModel)
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -125,10 +125,14 @@ fun AsisLearnScreen(
 }
 
 // HAPUS: Definisi MaterialItem di sini telah dihapus
-// agar konsisten dengan MaterialItem yang diimpor dari ViewModel
 
+// Perbaikan: Tambahkan navController dan viewModel ke definisi fungsi
 @Composable
-fun MaterialCard(item: MaterialItem) {
+fun MaterialCard(
+    item: MaterialItem,
+    navController: NavHostController,
+    viewModel: AsisLearnViewModel
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -199,7 +203,13 @@ fun MaterialCard(item: MaterialItem) {
             // Buttons
             Column(horizontalAlignment = Alignment.End) {
                 OutlinedButton(
-                    onClick = {},
+                    // Logika navigasi yang sudah Anda berikan, kini berfungsi
+                    onClick = {
+                        viewModel.getMaterialByTitle(item.title)
+                        // Encoding judul diperlukan jika judul mengandung karakter seperti spasi, /, atau &.
+                        val encodedTitle = java.net.URLEncoder.encode(item.title, "UTF-8")
+                        navController.navigate("materialDetail/$encodedTitle")
+                    },
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
