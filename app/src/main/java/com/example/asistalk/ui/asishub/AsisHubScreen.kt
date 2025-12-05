@@ -70,7 +70,7 @@ fun AsisHubScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp)
+                    .padding(top = 16.dp)
             ) {
                 Image(
                     painter = painterResource(R.drawable.logo_asistalk_hijau),
@@ -94,6 +94,7 @@ fun AsisHubScreen(
                         .clickable { navController.navigate("notif") }
                 )
             }
+            Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
         }
 
         // --- INPUT BOX (SEKARANG DENGAN LOGIKA BARU) ---
@@ -116,7 +117,10 @@ fun AsisHubScreen(
         items(posts, key = { it.id }) { post ->
             PostCard(
                 post = post,
-                onClickPost = { navController.navigate("postDetail") },
+                onClickPost = {
+                    vm.selectPostForViewing(post)
+                    navController.navigate("postDetail")
+                              },
                 onClickEdit = {
                     vm.selectPostForEditing(post)
                     navController.navigate("editPost")
