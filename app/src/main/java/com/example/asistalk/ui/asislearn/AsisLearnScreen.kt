@@ -93,26 +93,31 @@ fun AsisLearnScreen(
         // Tabs
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            // Latar belakang TabRow dibuat netral (abu-abu muda/surface variant)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            // Warna konten default diatur agar kontras di atas surfaceVariant
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             indicator = {
                 TabRowDefaults.Indicator(
                     modifier = Modifier.tabIndicatorOffset(it[selectedTab]),
-                    color = MaterialTheme.colorScheme.onPrimary
+                    // Indikator tetap sekunder (Secondary)
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         ) {
             tabs.forEachIndexed { index, title ->
+                val isSelected = selectedTab == index
                 Tab(
-                    selected = selectedTab == index,
+                    selected = isSelected,
                     onClick = {
-                        selectedTab = index // Memperbarui selectedTab akan memicu LaunchedEffect
+                        selectedTab = index
                     },
                     text = {
                         Text(
                             title,
-                            color = if (selectedTab == index) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                            // Teks Tab Aktif dibuat menggunakan warna Primary
+                            color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                         )
                     }
                 )
