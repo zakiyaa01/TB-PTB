@@ -138,13 +138,13 @@ fun AsisLearnScreen(
     }
 }
 
-// MaterialCard (Tidak Perlu Diubah)
 @Composable
 fun MaterialCard(
     item: MaterialItem,
     navController: NavHostController,
     viewModel: AsisLearnViewModel
 ) {
+    val isMyMaterial = item.author == "Anda"
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -211,14 +211,18 @@ fun MaterialCard(
 
             }
 
-            // Buttons
-            Column(horizontalAlignment = Alignment.End) {
+            // ========= BUTTON AREA (Fixed & Clean) =========
+            Column(
+                modifier = Modifier.wrapContentWidth(),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Tombol LIHAT
                 OutlinedButton(
-                    // Logika navigasi ke LihatScreen (materialDetail)
                     onClick = {
                         viewModel.getMaterialByTitle(item.title)
-                        val encodedTitle = java.net.URLEncoder.encode(item.title, "UTF-8")
-                        navController.navigate("materialDetail/$encodedTitle")
+                        val encoded = java.net.URLEncoder.encode(item.title, "UTF-8")
+                        navController.navigate("materialDetail/$encoded")
                     },
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -232,19 +236,56 @@ fun MaterialCard(
                     Text("Lihat", style = MaterialTheme.typography.labelLarge)
                 }
 
-                Spacer(Modifier.height(8.dp))
-
-                IconButton(
-                    onClick = {},
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
+                // Row ikon (Download, Edit, Hapus)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_download),
-                        contentDescription = "Download",
-                        modifier = Modifier.size(24.dp)
-                    )
+
+                    // DOWNLOAD (Selalu ada)
+                    IconButton(
+                        onClick = {},
+                        colors = IconButtonDefaults.iconButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_download),
+                            contentDescription = "Download",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    if (isMyMaterial) {
+
+                        // EDIT
+                        IconButton(
+                            onClick = { /* Navigate Edit */ },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.secondary
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_edit),
+                                contentDescription = "Edit",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        // DELETE
+                        IconButton(
+                            onClick = { viewModel.deleteMaterial(item) },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_delete),
+                                contentDescription = "Hapus",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
