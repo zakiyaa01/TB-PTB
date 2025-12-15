@@ -185,17 +185,17 @@ class AsisLearnViewModel : ViewModel() {
             _uploadEvent.value = true
         }
     }
-        // ====================================================================
-        // 6. FUNGSI BARU: HAPUS MATERI
-        // ====================================================================
-        fun deleteMaterial(material: MaterialItem) {
-            // Meluncurkan Coroutine di ViewModelScope
-            viewModelScope.launch {
-                // 1. Hapus materi dari daftar master (_allMaterials)
-                _allMaterials.remove(material)
+    // ====================================================================
+    // 6. FUNGSI BARU: HAPUS MATERI
+    // ====================================================================
+    fun deleteMaterial(material: MaterialItem) {
+        // Meluncurkan Coroutine di ViewModelScope
+        viewModelScope.launch {
+            // 1. Hapus materi dari daftar master (_allMaterials)
+            _allMaterials.remove(material)
 
-                // 2. Perbarui daftar materi yang ditampilkan dengan memanggil filter.
-                filterMaterials("", 0)
-            }
+            // 2. Perbarui daftar materi yang ditampilkan dengan memanggil filter.
+            filterMaterials("", 0)
         }
     }
+}
