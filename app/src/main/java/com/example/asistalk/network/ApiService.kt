@@ -15,7 +15,7 @@ data class LoginRequest(
 
 // Data yang dikirim ke server saat register
 data class RegisterRequest(
-    val name: String,
+    val full_name: String,
     val username: String,
     val email: String,
     val password: String
@@ -35,7 +35,7 @@ interface ApiService {
      * @param request Objek yang berisi username dan password.
      * @return Objek LoginResponse dari server.
      */
-    @POST("login")
+    @POST("auth/login")
     suspend fun loginUser(@Body request: LoginRequest): LoginResponse
 
     /**
@@ -43,7 +43,8 @@ interface ApiService {
      * @param request Objek yang berisi data user baru.
      * @return Objek RegisterResponse dari server.
      */
-    @POST("register") // Pastikan endpoint "register" ini sesuai dengan API Anda
-    suspend fun registerUser(@Body request: RegisterRequest): RegisterResponse
+    @POST("auth/register") // Pastikan endpoint "register" ini sesuai dengan API Anda
+    suspend fun registerUser(
+        @Body request: RegisterRequest
+    ): RegisterResponse
 }
-

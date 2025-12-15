@@ -160,7 +160,12 @@ fun RegisterScreen(
                     isLoading = true
                     scope.launch {
                         try {
-                            val request = RegisterRequest(name, username, email, password)
+                            val request = RegisterRequest(
+                                full_name = name,
+                                username = username,
+                                email = email,
+                                password = password
+                            )
                             val response = RetrofitClient.instance.registerUser(request)
 
                             if (response.success) {
