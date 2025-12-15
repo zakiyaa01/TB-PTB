@@ -18,6 +18,8 @@ import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.graphics.SolidColor
+import java.net.URLEncoder // Diperlukan untuk encoding
+import java.nio.charset.StandardCharsets // Diperlukan untuk encoding
 
 @Composable
 fun AsisLearnScreen(
@@ -53,8 +55,6 @@ fun AsisLearnScreen(
                 value = searchQuery,
                 onValueChange = {
                     searchQuery = it
-                    // Hapus: viewModel.searchQuery(it)
-                    // Fungsi filter sudah dihandle oleh LaunchedEffect
                 },
                 placeholder = { Text("Search...") },
                 modifier = Modifier
@@ -144,7 +144,15 @@ fun MaterialCard(
     navController: NavHostController,
     viewModel: AsisLearnViewModel
 ) {
+    // --- FIX: Deklarasikan variabel encoding di sini, di awal fungsi ---
+    // Gunakan item.title sebagai ID, dan encode untuk navigasi
+    val encodedMaterialId = remember(item.title) {
+        URLEncoder.encode(item.title, StandardCharsets.UTF_8.toString())
+    }
+    // -------------------------------------------------------------------
+
     val isMyMaterial = item.author == "Anda"
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -221,8 +229,8 @@ fun MaterialCard(
                 OutlinedButton(
                     onClick = {
                         viewModel.getMaterialByTitle(item.title)
-                        val encoded = java.net.URLEncoder.encode(item.title, "UTF-8")
-                        navController.navigate("materialDetail/$encoded")
+                        // Navigasi Lihat menggunakan encodedMaterialId
+                        navController.navigate("materialDetail/$encodedMaterialId")
                     },
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -244,7 +252,7 @@ fun MaterialCard(
 
                     // DOWNLOAD (Selalu ada)
                     IconButton(
-                        onClick = {},
+                        onClick = { /* TODO: Implement download logic */ },
                         colors = IconButtonDefaults.iconButtonColors(
                             contentColor = MaterialTheme.colorScheme.primary
                         )
@@ -260,7 +268,8 @@ fun MaterialCard(
 
                         // EDIT
                         IconButton(
-                            onClick = { /* Navigate Edit */ },
+                            // FIX: Gunakan encodedMaterialId yang sudah dideklarasikan di atas
+                            onClick = { navController.navigate("editMaterial/$encodedMaterialId") },
                             colors = IconButtonDefaults.iconButtonColors(
                                 contentColor = MaterialTheme.colorScheme.secondary
                             )

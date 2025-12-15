@@ -110,7 +110,7 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                 UploadMaterialScreen(navController = navController, viewModel = vm)
             }
 
-            // Detail materi
+            // Lihat materi
             composable(
                 route = "materialDetail/{materialTitle}",
                 arguments = listOf(navArgument("materialTitle") { type = NavType.StringType })
@@ -126,6 +126,25 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                     navController = navController,
                     viewModel = vm,
                     materialTitle = materialTitle
+                )
+            }
+
+            // EDIT MATERI
+            composable(
+                route = "editMaterial/{materialId}", // Menggunakan materialId (yang isinya adalah Title)
+                arguments = listOf(navArgument("materialId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("asislearn")
+                }
+                val vm: AsisLearnViewModel = viewModel(parentEntry)
+
+                val materialId = backStackEntry.arguments?.getString("materialId") ?: ""
+
+                EditMaterialScreen(
+                    navController = navController,
+                    viewModel = vm,
+                    materialId = materialId // Meneruskan ID ke EditMaterialScreen
                 )
             }
         }
