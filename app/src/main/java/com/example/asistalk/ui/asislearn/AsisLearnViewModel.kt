@@ -6,12 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.asistalk.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 // Data class yang digunakan secara konsisten oleh semua Composable
 data class MaterialItem(
-    val title: String,
+    val title: String, // Digunakan sebagai ID unik sementara (kunci)
     val type: String,
     val author: String,
     val icon: Int,
@@ -31,7 +32,7 @@ class AsisLearnViewModel : ViewModel() {
         MaterialItem(
             title = "Modul 5 Praktikum PTB",
             type = "PDF",
-            author = "Alexander",
+            author = "Anda",
             icon = R.drawable.ic_pdf,
             topic = "Modul Pertemuan 5: Material Design",
             description = "Modul dasar untuk praktikum perancangan tampilan berbasis Android Compose."
@@ -47,18 +48,16 @@ class AsisLearnViewModel : ViewModel() {
         MaterialItem(
             title = "Modul Rancang Bangun blabla",
             type = "Image",
-            author = "Alexander",
+            author = "Anda",
             icon = R.drawable.ic_image,
             topic = "Diagram UML Proyek",
             description = "Dokumen yang berisi diagram dan arsitektur proyek."
         ),
     )
 
-    // Gunakan ini untuk menyimpan dan mempublikasikan data yang sudah difilter/diurutkan (yang ditampilkan di UI)
     private val _materials = MutableStateFlow(_allMaterials.toList())
     val materials = _materials.asStateFlow()
 
-    // --- STATE DETAIL MATERI (Tidak Berubah) ---
     private val _selectedMaterial = MutableStateFlow<MaterialItem?>(null)
     val selectedMaterial = _selectedMaterial.asStateFlow()
 
@@ -68,28 +67,22 @@ class AsisLearnViewModel : ViewModel() {
     }
 
     // ====================================================================
-    // 2. FUNGSI FILTERING BARU (Menggantikan searchQuery)
+    // 2. FUNGSI FILTERING BARU
     // ====================================================================
 
-    /**
-     * Memfilter daftar materi berdasarkan query pencarian dan tab yang dipilih.
-     * @param query Teks pencarian
-     * @param selectedTab Indeks tab: 0=All, 1=My Material, 2=Download
-     */
     fun filterMaterials(query: String, selectedTab: Int) {
         val normalizedQuery = query.trim().lowercase()
         var filteredList: List<MaterialItem> = _allMaterials
 
         // 1. FILTER BERDASARKAN TAB
         filteredList = when (selectedTab) {
-            0 -> _allMaterials.toList() // ALL: Tampilkan semua
-            // MY MATERIAL: Filter yang authornya 'Anda' (Asumsi user yang upload)
+            0 -> _allMaterials.toList()
             1 -> _allMaterials.filter { it.author == "Anda" }
-            2 -> emptyList() // DOWNLOAD: Placeholder untuk materi yang diunduh
+            2 -> emptyList()
             else -> _allMaterials.toList()
         }
 
-        // 2. FILTER BERDASARKAN PENCARIAN (diaplikasikan pada hasil filter tab)
+        // 2. FILTER BERDASARKAN PENCARIAN
         if (normalizedQuery.isNotBlank()) {
             filteredList = filteredList.filter { item ->
                 item.title.lowercase().contains(normalizedQuery) ||
@@ -101,7 +94,7 @@ class AsisLearnViewModel : ViewModel() {
     }
 
     // ====================================================================
-    // 3. STATE INPUT UPLOAD (Tidak Berubah)
+    // 3. STATE INPUT UPLOAD/EDIT
     // ====================================================================
 
     private val _subject = MutableStateFlow("")
@@ -126,7 +119,19 @@ class AsisLearnViewModel : ViewModel() {
     val uploadEvent = _uploadEvent.asStateFlow()
 
     // ====================================================================
-    // 4. UPDATE STATE FUNCTIONS (Tidak Berubah)
+    // 4. STATE KHUSUS EDIT BARU
+    // ====================================================================
+
+    private val _currentFileName = MutableStateFlow("")
+    val currentFileName: StateFlow<String> = _currentFileName.asStateFlow()
+
+    private val _editEvent = MutableStateFlow<Boolean?>(null)
+    val editEvent: StateFlow<Boolean?> = _editEvent.asStateFlow()
+
+    private var originalMaterialTitle: String? = null
+
+    // ====================================================================
+    // 5. UPDATE STATE FUNCTIONS
     // ====================================================================
 
     fun onSubjectChange(value: String) { _subject.value = value }
@@ -135,12 +140,103 @@ class AsisLearnViewModel : ViewModel() {
     fun onFileTypeChange(value: String) { _fileType.value = value }
     fun onFileSelected(uri: Uri?) { _selectedFileUri.value = uri }
     fun consumeUploadEvent() { _uploadEvent.value = null }
+    fun consumeEditEvent() { _editEvent.value = null }
 
     // ====================================================================
-    // 5. UPLOAD FUNCTION (Diperbarui untuk memanggil filterMaterials)
+    // 6. FUNGSI BARU: RESET INPUT STATES (FIX 2)
+    // ====================================================================
+    /**
+     * Mereset semua field input form (dipanggil setelah upload/edit selesai,
+     * atau saat membuka form upload).
+     */
+    fun resetInputStates() {
+        _subject.value = ""
+        _topic.value = ""
+        _description.value = ""
+        _fileType.value = "PDF" // Set ke nilai default
+        _selectedFileUri.value = null
+        _currentFileName.value = ""
+        originalMaterialTitle = null
+        _isLoading.value = false
+    }
+
+    // ====================================================================
+    // 7. FUNGSI EDIT (DIPERBAIKI: Panggil resetInputStates)
+    // ====================================================================
+
+    fun loadMaterialForEdit(materialId: String) {
+        // Penting: Jangan panggil resetInputStates() di sini, karena ini adalah fungsi load.
+        viewModelScope.launch {
+            _isLoading.value = true
+            delay(500)
+
+            val materialToEdit = _allMaterials.find { it.title == materialId }
+
+            if (materialToEdit != null) {
+                originalMaterialTitle = materialToEdit.title
+                _subject.value = materialToEdit.title
+                _topic.value = materialToEdit.topic
+                _description.value = materialToEdit.description
+                _fileType.value = materialToEdit.type
+                _currentFileName.value = materialToEdit.fileUri.substringAfterLast("/")
+                _selectedFileUri.value = null
+            } else {
+                originalMaterialTitle = null
+            }
+
+            _isLoading.value = false
+        }
+    }
+
+    fun updateMaterial(materialId: String) {
+        if (_subject.value.isBlank() || _topic.value.isBlank()) {
+            _editEvent.value = false
+            return
+        }
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            delay(2000) // SIMULASI UPDATE API
+
+            val materialIndex = _allMaterials.indexOfFirst { it.title == materialId }
+
+            if (materialIndex != -1) {
+                val existingMaterial = _allMaterials[materialIndex]
+                val newFileUri = _selectedFileUri.value?.toString() ?: existingMaterial.fileUri
+                val iconRes = when (_fileType.value.lowercase()) {
+                    "pdf" -> R.drawable.ic_pdf
+                    "video" -> R.drawable.ic_video
+                    "image" -> R.drawable.ic_image
+                    else -> R.drawable.ic_pdf
+                }
+
+                val updatedMaterial = existingMaterial.copy(
+                    title = _subject.value,
+                    type = _fileType.value,
+                    topic = _topic.value,
+                    description = _description.value,
+                    fileUri = newFileUri,
+                    icon = iconRes
+                )
+
+                _allMaterials[materialIndex] = updatedMaterial
+                filterMaterials("", 0)
+
+                // --- FIX 1 & 2: Reset state setelah berhasil update ---
+                resetInputStates()
+                _editEvent.value = true // Sukses!
+            } else {
+                _editEvent.value = false
+            }
+
+            _isLoading.value = false
+        }
+    }
+
+    // ====================================================================
+    // 8. UPLOAD FUNCTION (DIPERBAIKI: Panggil resetInputStates)
     // ====================================================================
     fun uploadMaterial() {
-        // ... (validasi)
         if (_subject.value.isBlank() || _topic.value.isBlank() || _selectedFileUri.value == null) {
             _uploadEvent.value = false
             return
@@ -155,7 +251,6 @@ class AsisLearnViewModel : ViewModel() {
                 else -> R.drawable.ic_pdf
             }
 
-            // SIMULASI UPLOAD
             delay(2000)
 
             val newMaterial = MaterialItem(
@@ -168,34 +263,26 @@ class AsisLearnViewModel : ViewModel() {
                 fileUri = _selectedFileUri.value.toString()
             )
 
-            // 1. Tambahkan materi baru ke daftar master (_allMaterials)
             _allMaterials.add(0, newMaterial)
-
-            // 2. Perbarui state _materials.
-            // Setelah upload, kita paksa tampilkan tab ALL (indeks 0) tanpa query pencarian.
             filterMaterials("", 0)
 
-            // Reset field input
-            _subject.value = ""
-            _topic.value = ""
-            _description.value = ""
-            _selectedFileUri.value = null
+            // --- FIX 1 & 2: Reset state setelah berhasil upload ---
+            resetInputStates()
 
             _isLoading.value = false
             _uploadEvent.value = true
         }
     }
-        // ====================================================================
-        // 6. FUNGSI BARU: HAPUS MATERI
-        // ====================================================================
-        fun deleteMaterial(material: MaterialItem) {
-            // Meluncurkan Coroutine di ViewModelScope
-            viewModelScope.launch {
-                // 1. Hapus materi dari daftar master (_allMaterials)
-                _allMaterials.remove(material)
 
-                // 2. Perbarui daftar materi yang ditampilkan dengan memanggil filter.
-                filterMaterials("", 0)
-            }
+    // ====================================================================
+    // 9. FUNGSI HAPUS MATERI
+    // ====================================================================
+    fun deleteMaterial(material: MaterialItem) {
+        viewModelScope.launch {
+            delay(500)
+
+            _allMaterials.remove(material)
+            filterMaterials("", 0)
         }
     }
+}

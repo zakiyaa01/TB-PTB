@@ -6,7 +6,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -16,38 +18,49 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-// import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+// import androidx.lifecycle.viewmodel.compose.viewModel // <-- Dihapus jika menggunakan NavGraph injection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UploadMaterialScreen(
+fun EditMaterialScreen(
     navController: NavHostController,
+    // ID Material yang akan diedit. Harus diteruskan melalui navigasi.
+    materialId: String,
     viewModel: AsisLearnViewModel
 ) {
+    // Memanggil fungsi untuk memuat data material saat composable pertama kali dibuat
+    LaunchedEffect(materialId) {
+        viewModel.loadMaterialForEdit(materialId)
+    }
 
+    // Menggunakan state dari ViewModel
     val subject by viewModel.subject.collectAsState()
     val topic by viewModel.topic.collectAsState()
     val description by viewModel.description.collectAsState()
     val fileType by viewModel.fileType.collectAsState()
-    val selectedFileUri by viewModel.selectedFileUri.collectAsState()
+    val selectedFileUri by viewModel.selectedFileUri.collectAsState() // URI file baru/kosong
+    val currentFileName by viewModel.currentFileName.collectAsState() // Nama file yang sudah ada
     val isLoading by viewModel.isLoading.collectAsState()
-    val uploadEvent by viewModel.uploadEvent.collectAsState()
+    val editEvent by viewModel.editEvent.collectAsState() // Event khusus untuk Edit
+
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
 
     // State untuk dropdown
     var isExpanded by remember { mutableStateOf(false) }
-    val fileTypes = listOf("PDF", "Video", "Image", "Dokumen Lain") // Opsi tipe file
+    val fileTypes = listOf("PDF", "Video", "Image", "Dokumen Lain")
 
-    // --- FIX: Reset state input saat screen ini pertama kali diluncurkan ---
-    LaunchedEffect(Unit) {
-        viewModel.resetInputStates()
-    }
-    // ----------------------------------------------------------------------
-
-    // Trigger navigasi ketika upload berhasil
-    LaunchedEffect(uploadEvent) {
-        if (uploadEvent == true) {
+    // Trigger navigasi ketika edit berhasil
+    LaunchedEffect(editEvent) {
+        if (editEvent == true) {
+            Toast.makeText(context, "Material berhasil diperbarui!", Toast.LENGTH_SHORT).show()
             navController.popBackStack()
-            viewModel.consumeUploadEvent()
+            viewModel.consumeEditEvent()
+        } else if (editEvent == false) {
+            Toast.makeText(context, "Gagal memperbarui material.", Toast.LENGTH_SHORT).show()
+            viewModel.consumeEditEvent()
         }
     }
 
@@ -61,7 +74,7 @@ fun UploadMaterialScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Upload Material") },
+                title = { Text("Edit Material") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -85,6 +98,7 @@ fun UploadMaterialScreen(
                 .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
                 .padding(16.dp)
+                .verticalScroll(scrollState) // Tambahkan scroll untuk form yang panjang
         ) {
 
             Card(
@@ -133,10 +147,10 @@ fun UploadMaterialScreen(
                     ) {
                         OutlinedTextField(
                             value = fileType,
-                            onValueChange = {}, // Nilai hanya diubah melalui dropdown
+                            onValueChange = {},
                             readOnly = true,
                             modifier = Modifier
-                                .menuAnchor() // Tag untuk menu
+                                .menuAnchor()
                                 .fillMaxWidth(),
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) },
                             shape = RoundedCornerShape(12.dp),
@@ -166,8 +180,8 @@ fun UploadMaterialScreen(
                     }
                     Spacer(Modifier.height(12.dp))
 
-                    // FILE PICKER
-                    LabelText("Upload File")
+                    // FILE PICKER/PENGGANTIAN FILE
+                    LabelText("Change File (Optional)")
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -179,17 +193,22 @@ fun UploadMaterialScreen(
                             .clickable { filePickerLauncher.launch("*/*") },
                         contentAlignment = Alignment.CenterStart
                     ) {
-                        // FIX: Buat variabel lokal untuk smart cast
-                        val currentUri: Uri? = selectedFileUri
+                        // FIX: Buat salinan lokal dari nilai delegated properties
+                        val currentSelectedUri: Uri? = selectedFileUri
+                        val currentFileNameValue: String = currentFileName
 
-                        val fileName =
-                            currentUri?.lastPathSegment ?: "No file selected"
+                        // Tampilkan nama file yang sedang aktif (file yang sudah ada atau file baru)
+                        val displayedFileName = when {
+                            currentSelectedUri != null -> currentSelectedUri.lastPathSegment ?: "New file selected"
+                            currentFileNameValue.isNotBlank() -> "Current file: ${currentFileNameValue}"
+                            else -> "No file selected"
+                        }
 
                         Text(
-                            text = fileName,
+                            text = displayedFileName,
                             modifier = Modifier.padding(16.dp),
-                            // Gunakan currentUri untuk pengecekan null
-                            color = if (currentUri == null)
+                            // Gunakan variabel lokal untuk pengecekan
+                            color = if (currentSelectedUri == null && currentFileNameValue.isBlank())
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             else
                                 MaterialTheme.colorScheme.onSurface
@@ -198,7 +217,7 @@ fun UploadMaterialScreen(
 
                     Spacer(Modifier.height(20.dp))
 
-                    // UPLOAD BUTTON
+                    // UPDATE BUTTON
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
@@ -213,16 +232,17 @@ fun UploadMaterialScreen(
                         } else {
                             Button(
                                 onClick = {
-                                    viewModel.uploadMaterial()
+                                    // Panggil fungsi update, kirimkan ID material
+                                    viewModel.updateMaterial(materialId)
                                 },
-                                // Pengecekan null pada delegated property di sini masih diperbolehkan
+                                // Minimal harus ada Subject dan Topic yang terisi
                                 enabled = subject.isNotBlank()
                                         && topic.isNotBlank()
-                                        && selectedFileUri != null,
+                                        && !isLoading,
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
-                                    "Upload",
+                                    "Update Material",
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -230,37 +250,7 @@ fun UploadMaterialScreen(
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp)) // Jarak di bawah card
         }
     }
-}
-
-@Composable
-fun LabelText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onBackground
-    )
-}
-
-@Composable
-fun InputTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    maxLines: Int = 1
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        singleLine = maxLines == 1,
-        maxLines = maxLines,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-            cursorColor = MaterialTheme.colorScheme.primary
-        )
-    )
 }
