@@ -46,7 +46,6 @@ fun RegisterScreen(
     Box(modifier = Modifier.fillMaxSize()) {
 
         // --- HEADER HIJAU ATAS (STATIS) ---
-        // HANYA ADA LOGO DAN JUDUL "Sign Up" (besar)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -84,11 +83,9 @@ fun RegisterScreen(
         ) {
 
             // 1. SPACER UNTUK MENGATUR POSISI START FORM
-            // (Tinggi disesuaikan agar tulisan "Create Your Account!" berada di area putih,
-            // meniru posisi "Welcome back!" di LoginScreen)
             Spacer(modifier = Modifier.height(300.dp))
 
-            // 2. TEKS YANG DIPINDAHKAN KE AREA PUTIH
+            // 2. TEKS
             Text(
                 text = "Create Your Account!", // TEKS INI PINDAH
                 style = TextStyle(
