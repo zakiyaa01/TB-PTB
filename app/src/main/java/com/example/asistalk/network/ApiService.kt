@@ -78,4 +78,33 @@ interface ApiService {
     suspend fun getProfile(
         @Path("id") id: Int
     ): ProfileResponse
+
+// POSTS
+    @GET("api/posts")
+    suspend fun getPosts(
+        @Header("Authorization") token: String
+    ): List<PostResponse>
+
+    @Multipart
+    @POST("api/posts")
+    suspend fun createPost(
+        @Header("Authorization") token: String,
+        @Part("content") content: RequestBody,
+        @Part media: MultipartBody.Part?
+    ): PostResponse
+
+    // =====================
+// COMMENTS
+// =====================
+    @GET("api/comments/{postId}")
+    suspend fun getComments(
+        @Path("postId") postId: Int
+    ): List<CommentResponse>
+
+    @POST("api/comments")
+    suspend fun createComment(
+        @Header("Authorization") token: String,
+        @Body body: CreateCommentRequest
+    ): CommentResponse
+
 }
