@@ -1,50 +1,81 @@
 package com.example.asistalk.network
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
+import retrofit2.http.Path
 
-// --- Data Classes ---
-
-// Data yang dikirim ke server saat login
+// =====================
+// LOGIN
+// =====================
 data class LoginRequest(
     val username: String,
     val password: String
 )
 
-// data class LoginResponse sekarang dihapus dari sini karena sudah ada di filenya sendiri (LoginResponse.kt)
+data class LoginResponse(
+    val success: Boolean,
+    val token: String,
+    val user: UserProfile
+)
 
-// Data yang dikirim ke server saat register
-data class RegisterRequest(
+// =====================
+// REGISTER
+// =====================
+data class RegisterResponse(
+    val success: Boolean,
+    val message: String
+)
+
+// =====================
+// PROFILE
+// =====================
+data class ProfileResponse(
+    val success: Boolean,
+    val data: UserProfile
+)
+
+data class UserProfile(
+    val id: Int,
     val full_name: String,
     val username: String,
     val email: String,
-    val password: String
+    val phone_number: String,
+    val birth_date: String,
+    val gender: String,
+    val profile_image: String
 )
 
-// Data yang diterima dari server setelah register
-data class RegisterResponse(
-    val success: Boolean,
-    val message: String?
-)
-
-
-// --- Retrofit Service Interface ---
+// =====================
+// API SERVICE
+// =====================
 interface ApiService {
-    /**
-     * Mengirimkan data login ke server dan menerima respons.
-     * @param request Objek yang berisi username dan password.
-     * @return Objek LoginResponse dari server.
-     */
-    @POST("auth/login")
-    suspend fun loginUser(@Body request: LoginRequest): LoginResponse
 
-    /**
-     * Mengirimkan data registrasi ke server dan menerima respons.
-     * @param request Objek yang berisi data user baru.
-     * @return Objek RegisterResponse dari server.
-     */
-    @POST("auth/register") // Pastikan endpoint "register" ini sesuai dengan API Anda
+    @POST("api/auth/login")
+    suspend fun loginUser(
+        @Body request: LoginRequest
+    ): LoginResponse
+
+    @Multipart
+    @POST("api/auth/register")
     suspend fun registerUser(
-        @Body request: RegisterRequest
+        @Part("full_name") fullName: RequestBody,
+        @Part("username") username: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("phone_number") phone: RequestBody,
+        @Part("password") password: RequestBody,
+        @Part("birth_date") birthDate: RequestBody,
+        @Part("gender") gender: RequestBody,
+        @Part profile_image: MultipartBody.Part
     ): RegisterResponse
+
+    @GET("api/auth/profile/{id}")
+    suspend fun getProfile(
+        @Path("id") id: Int
+    ): ProfileResponse
 }

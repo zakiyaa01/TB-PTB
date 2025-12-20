@@ -9,8 +9,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,9 +22,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.asistalk.R
-import com.example.asistalk.UserPreferencesRepository // <-- IMPORT BARU
 import com.example.asistalk.network.LoginRequest
 import com.example.asistalk.network.RetrofitClient
+import com.example.asistalk.utils.UserPreferencesRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @Composable
@@ -37,44 +36,42 @@ fun LoginScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-
-    // State untuk Checkbox "Remember Me"
     var rememberMe by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // instance dari repository preferensi kita
-    val userPrefsRepo = remember { UserPreferencesRepository(context) }
+    val userPrefsRepo = remember {
+        UserPreferencesRepository(context)
+    }
 
-    // Ambil data yang tersimpan dari DataStore
-    // LaunchedEffect akan berjalan sekali saat layar dibuka
-    LaunchedEffect(key1 = Unit) {
-        // Ambil nilai awal untuk checkbox dan field login
-        userPrefsRepo.rememberMeFlow.collect { isRemembered ->
-            rememberMe = isRemembered
-            if (isRemembered) {
-                userPrefsRepo.savedUsernameFlow.collect { savedUsername ->
-                    username = savedUsername
-                }
-                userPrefsRepo.savedPasswordFlow.collect { savedPassword ->
-                    password = savedPassword
-                }
-            }
+    /**
+     * ✅ PERBAIKAN UTAMA DI SINI
+     * - Flow TIDAK BOLEH collect bersarang
+     * - Pakai first() karena cuma ambil nilai awal
+     */
+    LaunchedEffect(Unit) {
+        rememberMe = userPrefsRepo.rememberMeFlow.first()
+
+        if (rememberMe) {
+            username = userPrefsRepo.savedUsernameFlow.first()
+            password = userPrefsRepo.savedPasswordFlow.first()
         }
     }
 
-
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Bagian hijau atas (tidak berubah)
+        // Header hijau
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(260.dp)
                 .background(
                     color = Color(0xFF00BFA6),
-                    shape = RoundedCornerShape(bottomStart = 100.dp, bottomEnd = 100.dp)
+                    shape = RoundedCornerShape(
+                        bottomStart = 100.dp,
+                        bottomEnd = 100.dp
+                    )
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -94,7 +91,6 @@ fun LoginScreen(
             }
         }
 
-        // Konten utama (form login)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -121,7 +117,7 @@ fun LoginScreen(
                 label = { Text("Username") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 enabled = !isLoading
             )
 
@@ -143,17 +139,17 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Hubungkan Checkbox dengan state 'rememberMe'
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { rememberMe = !rememberMe } // Buat seluruh baris bisa diklik
+                    modifier = Modifier.clickable { rememberMe = !rememberMe }
                 ) {
                     Checkbox(
                         checked = rememberMe,
-                        onCheckedChange = { isChecked -> rememberMe = isChecked }
+                        onCheckedChange = { rememberMe = it }
                     )
                     Text("Remember me", fontSize = 13.sp)
                 }
+
                 Text(
                     "Forgot Password?",
                     color = Color.Gray,
@@ -166,26 +162,61 @@ fun LoginScreen(
             Button(
                 onClick = {
                     if (username.isBlank() || password.isBlank()) {
-                        Toast.makeText(context, "Username dan password tidak boleh kosong", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            "Username dan password tidak boleh kosong",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         return@Button
                     }
 
                     isLoading = true
                     scope.launch {
                         try {
-                            // Simpan kredensial sebelum login
-                            userPrefsRepo.saveLoginCredentials(username, password, rememberMe)
+                            userPrefsRepo.saveLoginCredentials(
+                                username,
+                                password,
+                                rememberMe
+                            )
 
+                            // 1️⃣ LOGIN
                             val request = LoginRequest(username, password)
                             val response = RetrofitClient.instance.loginUser(request)
 
-                            if (response.success) {
+                            if (response.success && response.token != null && response.user != null) {
+
+                                userPrefsRepo.saveToken(response.token)
+
+                                val profile = response.user
+                                val fullImageUrl =
+                                    "http://10.0.2.2:3000${profile.profile_image}"
+
+
+                                userPrefsRepo.saveFullProfile(
+                                    fullName = profile.full_name,
+                                    username = profile.username,
+                                    email = profile.email,
+                                    phone = profile.phone_number,
+                                    birthDate = profile.birth_date,
+                                    gender = profile.gender,
+                                    profileImage = fullImageUrl
+                                )
+
                                 onLoginSuccess()
                             } else {
-                                Toast.makeText(context, response.message ?: "Login gagal", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Login gagal",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
+
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "Terjadi kesalahan: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         } finally {
                             isLoading = false
                         }
@@ -194,7 +225,9 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFA6)),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF00BFA6)
+                ),
                 shape = RoundedCornerShape(24.dp),
                 enabled = !isLoading
             ) {
@@ -205,19 +238,28 @@ fun LoginScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Log In", color = Color.White, fontSize = 16.sp)
+                    Text(
+                        text = "Log In",
+                        color = Color.White,
+                        fontSize = 16.sp
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Belum punya akun? ", color = Color.Gray)
                 Text(
                     text = "Sign Up",
                     color = Color(0xFF00BFA6),
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { onNavigateToRegister() }
+                    modifier = Modifier.clickable {
+                        onNavigateToRegister()
+                    }
                 )
             }
         }

@@ -1,6 +1,10 @@
 package com.example.asistalk.ui.auth
 
+import android.content.Context
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,35 +21,47 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.asistalk.R
-import com.example.asistalk.network.RegisterRequest
 import com.example.asistalk.network.RetrofitClient
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
 
 @Composable
 fun RegisterScreen(
     onNavigateBackToLogin: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var birthDate by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var profileImageUri by remember { mutableStateOf<Uri?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     val scrollState = rememberScrollState()
+
+    // IMAGE PICKER
+    val imagePicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            profileImageUri = uri
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // --- HEADER HIJAU ATAS (STATIS) ---
+        // HEADER
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -72,110 +88,141 @@ fun RegisterScreen(
             }
         }
 
-        // --- KONTEN FORM YANG BISA DI-SCROLL ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .imePadding()
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // 1. SPACER UNTUK MENGATUR POSISI START FORM
             Spacer(modifier = Modifier.height(300.dp))
 
-            // 2. TEKS
             Text(
-                text = "Create Your Account!", // TEKS INI PINDAH
-                style = TextStyle(
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF00695C) // Warna gelap (seperti di LoginScreen)
-                )
-            )
-
-            Spacer(modifier = Modifier.height(24.dp)) // Jarak antara judul form dan input pertama
-
-            // 3. INPUT FIELDS (Sama seperti sebelumnya)
-
-            // 1. NAMA LENGKAP
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Nama Lengkap") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !isLoading
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 2. USERNAME
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Username") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !isLoading
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3. EMAIL
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                singleLine = true,
-                enabled = !isLoading
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 4. PASSWORD
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                enabled = !isLoading
+                text = "Create Your Account!",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF00695C)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- TOMBOL DAFTAR ---
+            OutlinedTextField(
+                value = fullName,
+                onValueChange = { fullName = it },
+                label = { Text("Nama Lengkap") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = { Text("Nomor Telepon") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = birthDate,
+                onValueChange = { birthDate = it },
+                label = { Text("Tanggal Lahir (YYYY-MM-DD)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = gender,
+                onValueChange = { gender = it },
+                label = { Text("Jenis Kelamin (L / P)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(onClick = { imagePicker.launch("image/*") }) {
+                Text(if (profileImageUri == null) "Pilih Foto Profil" else "Foto Dipilih ✔")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             Button(
                 onClick = {
-                    if (name.isBlank() || username.isBlank() || email.isBlank() || password.isBlank()) {
-                        Toast.makeText(context, "Semua kolom wajib diisi", Toast.LENGTH_SHORT).show()
+                    if (
+                        fullName.isBlank() || username.isBlank() || email.isBlank() ||
+                        phone.isBlank() || birthDate.isBlank() ||
+                        gender.isBlank() || password.isBlank() ||
+                        profileImageUri == null
+                    ) {
+                        Toast.makeText(context, "Semua data wajib diisi", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
+
                     isLoading = true
                     scope.launch {
                         try {
-                            val request = RegisterRequest(
-                                full_name = name,
-                                username = username,
-                                email = email,
-                                password = password
+                            val imageFile = getFileFromUri(context, profileImageUri!!)
+                            val imageRequest =
+                                imageFile.asRequestBody("image/*".toMediaType())
+
+                            val imagePart = MultipartBody.Part.createFormData(
+                                "profile_image",
+                                imageFile.name,
+                                imageRequest
                             )
-                            val response = RetrofitClient.instance.registerUser(request)
+
+                            val response = RetrofitClient.instance.registerUser(
+                                fullName.toRequestBody("text/plain".toMediaType()),
+                                username.toRequestBody("text/plain".toMediaType()),
+                                email.toRequestBody("text/plain".toMediaType()),
+                                phone.toRequestBody("text/plain".toMediaType()),
+                                password.toRequestBody("text/plain".toMediaType()),
+                                birthDate.toRequestBody("text/plain".toMediaType()),
+                                gender.toRequestBody("text/plain".toMediaType()),
+                                imagePart
+                            )
 
                             if (response.success) {
-                                Toast.makeText(context, "Registrasi berhasil! Silakan login.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Registrasi berhasil", Toast.LENGTH_LONG).show()
                                 onNavigateBackToLogin()
                             } else {
-                                Toast.makeText(context, response.message ?: "Registrasi gagal", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, response.message ?: "Gagal", Toast.LENGTH_SHORT).show()
                             }
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
                         } finally {
                             isLoading = false
                         }
@@ -184,35 +231,37 @@ fun RegisterScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFA6)),
-                shape = RoundedCornerShape(24.dp),
-                enabled = !isLoading
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFA6))
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("Sign Up", color = Color.White, fontSize = 16.sp)
-                }
+                Text("Sign Up", color = Color.White)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // --- NAVIGASI KE LOGIN ---
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                Text("Sudah punya akun? ", color = Color.Gray)
+            Row {
+                Text("Sudah punya akun? ")
                 Text(
-                    text = "Log In",
+                    "Login",
                     color = Color(0xFF00BFA6),
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { onNavigateBackToLogin() }
                 )
             }
-
-            Spacer(modifier = Modifier.height(40.dp))
         }
     }
+}
+
+/**
+ * 🔥 HELPER WAJIB
+ * Convert content:// Uri → File (AMAN UNTUK ANDROID MODERN)
+ */
+fun getFileFromUri(context: Context, uri: Uri): File {
+    val inputStream = context.contentResolver.openInputStream(uri)
+        ?: throw IllegalArgumentException("Tidak bisa membuka file")
+
+    val tempFile = File.createTempFile("profile_", ".jpg", context.cacheDir)
+    tempFile.outputStream().use { output ->
+        inputStream.copyTo(output)
+    }
+    return tempFile
 }

@@ -6,7 +6,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "http://10.0.2.2:3000" // gunakan 10.0.2.2 untuk emulator
+
+    const val BASE_URL = "http://10.0.2.2:3000/"
+    const val BASE_IMAGE_URL = "http://10.0.2.2:3000"
 
     private val client: OkHttpClient by lazy {
         val logging = HttpLoggingInterceptor()
@@ -17,12 +19,11 @@ object RetrofitClient {
     }
 
     val instance: ApiService by lazy {
-        val retrofit = Retrofit.Builder()
+        Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()
-
-        retrofit.create(ApiService::class.java)
+            .create(ApiService::class.java)
     }
 }

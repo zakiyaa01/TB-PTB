@@ -1,55 +1,125 @@
-package com.example.asistalk
+package com.example.asistalk.utils
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-// Buat instance DataStore sebagai singleton di level top
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
+// SINGLE DataStore instance
+private val Context.dataStore by preferencesDataStore(name = "user_prefs")
 
 class UserPreferencesRepository(private val context: Context) {
 
-    // Definisikan "kunci" untuk setiap data yang ingin disimpan
-    private object PreferencesKeys {
+    // ===== KEYS =====
+    private object Keys {
         val USERNAME = stringPreferencesKey("username")
+        val FULLNAME = stringPreferencesKey("fullname")
+        val EMAIL = stringPreferencesKey("email")
+        val PHONE = stringPreferencesKey("phone")
+        val BIRTH_DATE = stringPreferencesKey("birth_date")
+        val GENDER = stringPreferencesKey("gender")
+        val PROFILE_IMAGE = stringPreferencesKey("profile_image")
         val PASSWORD = stringPreferencesKey("password")
+        val TOKEN = stringPreferencesKey("token")
         val REMEMBER_ME = booleanPreferencesKey("remember_me")
     }
 
-    // Fungsi untuk menyimpan data login
-    suspend fun saveLoginCredentials(username: String, password: String, rememberMe: Boolean) {
-        context.dataStore.edit { preferences ->
+    // ===== LOGIN CREDENTIALS =====
+    suspend fun saveLoginCredentials(
+        username: String,
+        password: String,
+        rememberMe: Boolean
+    ) {
+        context.dataStore.edit { prefs ->
             if (rememberMe) {
-                preferences[PreferencesKeys.USERNAME] = username
-                preferences[PreferencesKeys.PASSWORD] = password
-                preferences[PreferencesKeys.REMEMBER_ME] = true
+                prefs[Keys.USERNAME] = username
+                prefs[Keys.PASSWORD] = password
+                prefs[Keys.REMEMBER_ME] = true
             } else {
-                // Jika tidak dicentang, hapus data yang tersimpan
-                preferences.remove(PreferencesKeys.USERNAME)
-                preferences.remove(PreferencesKeys.PASSWORD)
-                preferences[PreferencesKeys.REMEMBER_ME] = false
+                prefs.remove(Keys.USERNAME)
+                prefs.remove(Keys.PASSWORD)
+                prefs[Keys.REMEMBER_ME] = false
             }
         }
     }
 
-    // Flow untuk mendapatkan status "Remember Me" secara real-time
-    val rememberMeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.REMEMBER_ME] ?: false
+    // ===== TOKEN =====
+    suspend fun saveToken(token: String) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.TOKEN] = token
+        }
     }
 
-    // Flow untuk mendapatkan username yang tersimpan
-    val savedUsernameFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.USERNAME] ?: ""
+    suspend fun getToken(): String {
+        return context.dataStore.data.first()[Keys.TOKEN] ?: ""
     }
 
-    // Flow untuk mendapatkan password yang tersimpan
-    val savedPasswordFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.PASSWORD] ?: ""
+    // ===== USER PROFILE (LENGKAP) =====
+    suspend fun saveFullProfile(
+        username: String,
+        fullName: String,
+        email: String,
+        phone: String,
+        birthDate: String,
+        gender: String,
+        profileImage: String
+    ) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.USERNAME] = username
+            prefs[Keys.FULLNAME] = fullName
+            prefs[Keys.EMAIL] = email
+            prefs[Keys.PHONE] = phone
+            prefs[Keys.BIRTH_DATE] = birthDate
+            prefs[Keys.GENDER] = gender
+            prefs[Keys.PROFILE_IMAGE] = profileImage
+        }
+    }
+
+    // ===== FLOWS (DIBACA UI & VIEWMODEL) =====
+    val usernameFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.USERNAME] ?: ""
+    }
+
+    val fullnameFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.FULLNAME] ?: ""
+    }
+
+    val emailFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.EMAIL] ?: ""
+    }
+
+    val phoneFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.PHONE] ?: ""
+    }
+
+    val birthDateFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.BIRTH_DATE] ?: ""
+    }
+
+    val genderFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.GENDER] ?: ""
+    }
+    val profileImageFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.PROFILE_IMAGE] ?: ""
+    }
+
+    // ===== REMEMBER ME =====
+    val rememberMeFlow: Flow<Boolean> = context.dataStore.data.map {
+        it[Keys.REMEMBER_ME] ?: false
+    }
+
+    val savedUsernameFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.USERNAME] ?: ""
+    }
+
+    val savedPasswordFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.PASSWORD] ?: ""
+    }
+
+    // ===== LOGOUT =====
+    suspend fun clearAll() {
+        context.dataStore.edit { it.clear() }
     }
 }
