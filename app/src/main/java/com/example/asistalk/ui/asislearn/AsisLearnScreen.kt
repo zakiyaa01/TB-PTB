@@ -168,10 +168,9 @@ fun MaterialCard(
     viewModel: AsisLearnViewModel
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
-    val isMyMaterial = item.user_id == viewModel.currentUserId
-
-    // Dialog state
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val isMyMaterial = item.user_id == viewModel.currentUserId
+    val token = viewModel.currentUserToken
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -192,13 +191,11 @@ fun MaterialCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(
-                            id = when (item.file_type.uppercase()) {
-                                "PDF" -> R.drawable.ic_pdf
-                                "VIDEO" -> R.drawable.ic_video
-                                else -> R.drawable.ic_image
-                            }
-                        ),
+                        imageVector = when (item.file_type.uppercase()) {
+                            "PDF" -> Icons.Default.PictureAsPdf
+                            "VIDEO" -> Icons.Default.PlayCircle
+                            else -> Icons.Default.Description
+                        },
                         contentDescription = null,
                         modifier = Modifier.size(26.dp),
                         tint = MaterialTheme.colorScheme.primary
@@ -221,7 +218,7 @@ fun MaterialCard(
                 shape = RoundedCornerShape(10.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
             ) {
-                Icon(Icons.Default.Visibility, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Lihat Materi", fontWeight = FontWeight.SemiBold)
             }
@@ -234,13 +231,13 @@ fun MaterialCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, null, modifier = Modifier.size(14.dp), tint = Color.LightGray)
+                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.LightGray)
                     Spacer(Modifier.width(4.dp))
                     Text(item.author_name, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 }
 
                 IconButton(onClick = { /* Download */ }) {
-                    Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
 
                 if (isMyMaterial) {
@@ -248,7 +245,7 @@ fun MaterialCard(
                         viewModel.setEditData(item)
                         navController.navigate("uploadMaterial")
                     }) {
-                        Icon(Icons.Default.Edit, null, tint = Color.Gray)
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Materi", tint = Color.Gray)
                     }
 
                     IconButton(
@@ -264,13 +261,19 @@ fun MaterialCard(
                             title = { Text("Hapus Materi?") },
                             text = { Text("Apakah Anda yakin ingin menghapus materi ini?") },
                             confirmButton = {
-                                TextButton(onClick = {
-                                    viewModel.deleteMaterial(item.id, viewModel.currentUserToken)
-                                    showDeleteDialog = false
-                                }) { Text("Hapus") }
+                                TextButton(
+                                    onClick = {
+                                        viewModel.deleteMaterial(item.id, token)
+                                        showDeleteDialog = false
+                                    }
+                                ) {
+                                    Text("Hapus")
+                                }
                             },
                             dismissButton = {
-                                TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") }
+                                TextButton(onClick = { showDeleteDialog = false }) {
+                                    Text("Batal")
+                                }
                             }
                         )
                     }

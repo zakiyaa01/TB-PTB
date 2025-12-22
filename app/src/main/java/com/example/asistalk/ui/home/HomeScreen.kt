@@ -4,138 +4,243 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.asistalk.network.MaterialItem
 import com.example.asistalk.ui.asislearn.AsisLearnViewModel
-import com.example.asistalk.network.MaterialItem // Menggunakan model resmi dari network
 import com.example.asistalk.ui.theme.Primary
 import com.example.asistalk.ui.theme.Secondary
 
-// HAPUS data class MaterialItem lama di sini agar tidak redeclaration!
-
+// Model data lokal untuk Post
 data class PostData(
     val author: String,
     val nim: String,
     val content: String,
-    val profileImageRes: Int,
-    val attachedImageRes: Int
+    val time: String = "Baru saja"
 )
 
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: AsisLearnViewModel // TAMBAHKAN INI agar NavGraph tidak error
+    viewModel: AsisLearnViewModel
 ) {
-    // Ambil data dari API saat Home dibuka
     LaunchedEffect(Unit) {
         viewModel.fetchAllMaterials()
     }
 
     val materials by viewModel.materials.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val userName = viewModel.currentUserFullName // Ambil dari ViewModel
+    val userName = viewModel.currentUserFullName
 
     val recentPosts = listOf(
-        PostData("Zakiya Aulia", "23115212029", "UTS MPSI tadi susah banget!", 0, 0),
-        PostData("Ria Puspita", "23115212030", "Grup belajar ASD sudah dibuat", 0, 0)
+        PostData("Zakiya Aulia", "23115212029", "UTS MPSI tadi susah banget!", "10m yang lalu"),
+        PostData("Ria Puspita", "23115212030", "Grup belajar ASD sudah dibuat, cek link di bio ya.", "1j yang lalu")
     )
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(bottom = 80.dp)
-    ) {
-        item { HomeHeader() }
-        item { FloatingWelcomeCard(userName, navController) }
-
-        item {
-            SectionHeaderWithAction("Materi Terbaru", "Lihat Semua") {
-                navController.navigate("asislearn")
-            }
-        }
-
-        if (isLoading) {
+    Scaffold { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color(0xFFF8FAFC)),
+            contentPadding = PaddingValues(bottom = 32.dp)
+        ) {
+            // --- HEADER GRADASI ---
             item {
-                Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Primary, Secondary)
+                            ),
+                            shape = RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp)
+                        )
+                        .padding(horizontal = 24.dp, vertical = 40.dp)
+                ) {
+                    Column {
+                        Text(
+                            "AsisTalk",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp
+                        )
+                        Text(
+                            "Solusi Belajar Mahasiswa",
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 24.sp,
+                            lineHeight = 32.sp
+                        )
+                    }
                 }
             }
-        } else {
-            // Tampilkan 3 materi terbaru dari API
-            items(materials.take(3)) { material ->
-                NewMaterialCard(material) {
-                    // Navigasi ke detail atau list
-                    navController.navigate("asislearn")
+
+            // --- FLOATING CARD ---
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .offset(y = (-50).dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+                ) {
+                    Column(Modifier.padding(24.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(45.dp)
+                                    .background(Primary.copy(alpha = 0.1f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.WavingHand,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    "Halo, ${userName.ifEmpty { "Mahasiswa" }}!",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1E293B)
+                                )
+                                Text("Mau upgrade skill apa hari ini?", fontSize = 13.sp, color = Color.Gray)
+                            }
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
+                        // --- TOMBOL MODERN (SATU WARNA + STROKE) ---
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            ActionHomeButton(
+                                text = "Diskusi",
+                                icon = Icons.Default.ChatBubbleOutline,
+                                modifier = Modifier.weight(1f),
+                                onClick = { navController.navigate("asishub") }
+                            )
+                            ActionHomeButton(
+                                text = "Materi",
+                                icon = Icons.Default.MenuBook,
+                                modifier = Modifier.weight(1f),
+                                onClick = { navController.navigate("asislearn") }
+                            )
+                        }
+                    }
                 }
             }
-        }
 
-        item { SectionHeaderWithAction("Diskusi Terbaru", "Ke AsisHub") {
-            navController.navigate("asishub")
-        } }
+            // --- SECTION MATERI ---
+            item {
+                SectionHeader(
+                    title = "Materi Terbaru",
+                    onActionClick = { navController.navigate("asislearn") }
+                )
+            }
 
-        items(recentPosts) { post ->
-            RecentPostCard(post) {}
+            if (isLoading) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Primary, strokeWidth = 3.dp)
+                    }
+                }
+            } else {
+                items(materials.take(3)) { material ->
+                    NewMaterialCard(material) {
+                        navController.navigate("asislearn")
+                    }
+                }
+            }
+
+            // --- SECTION DISKUSI ---
+            item {
+                Spacer(Modifier.height(8.dp))
+                SectionHeader(
+                    title = "Diskusi Populer",
+                    onActionClick = { navController.navigate("asishub") }
+                )
+            }
+
+            items(recentPosts) { post ->
+                RecentPostCard(post)
+            }
         }
     }
 }
 
 @Composable
-fun HomeHeader() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .background(
-                color = Secondary,
-                shape = RoundedCornerShape(bottomStart = 60.dp, bottomEnd = 60.dp)
-            )
-    )
-}
-
-@Composable
-fun FloatingWelcomeCard(userName: String, navController: NavController) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .offset(y = (-50).dp),
-        shape = RoundedCornerShape(22.dp),
-        elevation = CardDefaults.cardElevation(8.dp)
+fun ActionHomeButton(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, Primary),
+        shadowElevation = 2.dp
     ) {
-        Column(Modifier.padding(20.dp)) {
-            Text("Selamat Datang👋")
-            Text(userName, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Primary)
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(modifier = Modifier.weight(1f), onClick = { navController.navigate("asishub") }) { Text("Diskusi") }
-                Button(modifier = Modifier.weight(1f), onClick = { navController.navigate("asislearn") }) { Text("Materi") }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Primary.copy(alpha = 0.08f),
+                            Secondary.copy(alpha = 0.02f)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = Primary, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = Primary)
             }
         }
     }
 }
 
 @Composable
-fun SectionHeaderWithAction(title: String, actionText: String, onActionClick: () -> Unit) {
+fun SectionHeader(title: String, onActionClick: () -> Unit) {
     Row(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 8.dp, top = 0.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, fontWeight = FontWeight.Bold)
+        Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B))
         Spacer(Modifier.weight(1f))
-        TextButton(onClick = onActionClick) { Text(actionText) }
+        TextButton(onClick = onActionClick) {
+            Text("Lihat Semua", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(16.dp), tint = Primary)
+        }
     }
 }
 
@@ -144,30 +249,57 @@ fun NewMaterialCard(data: MaterialItem, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         onClick = onClick
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(data.subject, fontWeight = FontWeight.Bold) // Sesuaikan: title jadi subject
-            Text(data.topic)
-            Text("By: ${data.author_name}", style = MaterialTheme.typography.labelSmall)
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Secondary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Description, null, tint = Secondary)
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(data.subject, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF334155))
+                Text(data.topic, fontSize = 13.sp, color = Color.Gray)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, null, modifier = Modifier.size(12.dp), tint = Color.LightGray)
+                    Spacer(Modifier.width(4.dp))
+                    Text(data.author_name, fontSize = 11.sp, color = Color.LightGray)
+                }
+            }
         }
     }
 }
 
 @Composable
-fun RecentPostCard(data: PostData, onClick: () -> Unit) {
+fun RecentPostCard(data: PostData) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        onClick = onClick
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(data.author, fontWeight = FontWeight.Bold)
-            Text(data.content)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(32.dp).background(Color(0xFFE2E8F0), CircleShape))
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(data.author, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1E293B))
+                    Text(data.time, fontSize = 11.sp, color = Color.LightGray)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(data.content, fontSize = 14.sp, color = Color(0xFF475569), lineHeight = 20.sp)
         }
     }
 }
