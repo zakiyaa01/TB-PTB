@@ -14,6 +14,7 @@ class UserPreferencesRepository(private val context: Context) {
 
     // ===== KEYS =====
     private object Keys {
+        val USER_ID = intPreferencesKey("user_id")
         val USERNAME = stringPreferencesKey("username")
         val FULLNAME = stringPreferencesKey("fullname")
         val EMAIL = stringPreferencesKey("email")
@@ -25,6 +26,8 @@ class UserPreferencesRepository(private val context: Context) {
         val TOKEN = stringPreferencesKey("token")
         val REMEMBER_ME = booleanPreferencesKey("remember_me")
     }
+
+
 
     // ===== LOGIN CREDENTIALS =====
     suspend fun saveLoginCredentials(
@@ -58,6 +61,7 @@ class UserPreferencesRepository(private val context: Context) {
 
     // ===== USER PROFILE (LENGKAP) =====
     suspend fun saveFullProfile(
+        userId: Int,
         username: String,
         fullName: String,
         email: String,
@@ -67,6 +71,7 @@ class UserPreferencesRepository(private val context: Context) {
         profileImage: String
     ) {
         context.dataStore.edit { prefs ->
+            prefs[Keys.USER_ID] = userId
             prefs[Keys.USERNAME] = username
             prefs[Keys.FULLNAME] = fullName
             prefs[Keys.EMAIL] = email
@@ -78,6 +83,9 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     // ===== FLOWS (DIBACA UI & VIEWMODEL) =====
+    val userIdFlow: Flow<Int> = context.dataStore.data.map {
+        it[Keys.USER_ID] ?: -1
+    }
     val usernameFlow: Flow<String> = context.dataStore.data.map {
         it[Keys.USERNAME] ?: ""
     }

@@ -2,17 +2,8 @@ package com.example.asistalk.network
 
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.Multipart
-import retrofit2.http.POST
-import retrofit2.http.Part
-import retrofit2.http.Path
+import retrofit2.http.*
 
-// =====================
-// LOGIN
-// =====================
 data class LoginRequest(
     val username: String,
     val password: String
@@ -24,17 +15,11 @@ data class LoginResponse(
     val user: UserProfile
 )
 
-// =====================
-// REGISTER
-// =====================
 data class RegisterResponse(
     val success: Boolean,
     val message: String
 )
 
-// =====================
-// PROFILE
-// =====================
 data class ProfileResponse(
     val success: Boolean,
     val data: UserProfile
@@ -51,15 +36,32 @@ data class UserProfile(
     val profile_image: String
 )
 
-// =====================
-// API SERVICE
-// =====================
+data class UploadResponse(
+    val success: Boolean,
+    val message: String
+)
+
+data class MaterialResponse(
+    val success: Boolean,
+    val data: List<MaterialItem>
+)
+
+data class MaterialItem(
+    val id: Int,
+    val user_id: Int,
+    val subject: String,
+    val topic: String,
+    val description: String?,
+    val file_type: String,
+    val file_path: String,
+    val author_name: String,
+    val profile_image: String?
+)
+
 interface ApiService {
 
     @POST("api/auth/login")
-    suspend fun loginUser(
-        @Body request: LoginRequest
-    ): LoginResponse
+    suspend fun loginUser(@Body request: LoginRequest): LoginResponse
 
     @Multipart
     @POST("api/auth/register")
@@ -75,7 +77,41 @@ interface ApiService {
     ): RegisterResponse
 
     @GET("api/auth/profile/{id}")
-    suspend fun getProfile(
+    suspend fun getProfile(@Path("id") id: Int): ProfileResponse
+
+    // =====================
+    // ASISLEARN MATERIALS
+    // =====================
+
+    @GET("api/materials")
+    suspend fun getAllMaterials(): MaterialResponse
+
+    @Multipart
+    @POST("api/materials")
+    suspend fun uploadMaterial(
+        @Header("Authorization") token: String,
+        @Part("subject") subject: RequestBody,
+        @Part("topic") topic: RequestBody,
+        @Part("description") description: RequestBody?,
+        @Part("file_type") fileType: RequestBody,
+        @Part file: MultipartBody.Part
+    ): UploadResponse
+
+    @Multipart
+    @PUT("api/materials/{id}")
+    suspend fun updateMaterial(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Part("subject") subject: RequestBody,
+        @Part("topic") topic: RequestBody,
+        @Part("description") description: RequestBody?,
+        @Part("file_type") fileType: RequestBody, // Tambahkan ini agar sinkron
+        @Part file: MultipartBody.Part? = null    // File bersifat opsional saat edit
+    ): UploadResponse
+
+    @DELETE("api/materials/{id}")
+    suspend fun deleteMaterial(
+        @Header("Authorization") token: String,
         @Path("id") id: Int
-    ): ProfileResponse
+    ): UploadResponse
 }

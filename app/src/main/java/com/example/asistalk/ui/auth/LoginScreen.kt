@@ -40,19 +40,11 @@ fun LoginScreen(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val userPrefsRepo = remember { UserPreferencesRepository(context) }
 
-    val userPrefsRepo = remember {
-        UserPreferencesRepository(context)
-    }
-
-    /**
-     * ✅ PERBAIKAN UTAMA DI SINI
-     * - Flow TIDAK BOLEH collect bersarang
-     * - Pakai first() karena cuma ambil nilai awal
-     */
+    // Memuat kredensial jika "Remember Me" sebelumnya aktif
     LaunchedEffect(Unit) {
         rememberMe = userPrefsRepo.rememberMeFlow.first()
-
         if (rememberMe) {
             username = userPrefsRepo.savedUsernameFlow.first()
             password = userPrefsRepo.savedPasswordFlow.first()
@@ -60,18 +52,14 @@ fun LoginScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
-        // Header hijau
+        // Header hijau melengkung
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(260.dp)
                 .background(
                     color = Color(0xFF00BFA6),
-                    shape = RoundedCornerShape(
-                        bottomStart = 100.dp,
-                        bottomEnd = 100.dp
-                    )
+                    shape = RoundedCornerShape(bottomStart = 100.dp, bottomEnd = 100.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -102,11 +90,7 @@ fun LoginScreen(
 
             Text(
                 text = "Welcome back!",
-                style = TextStyle(
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF00695C)
-                )
+                style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00695C))
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -143,18 +127,10 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable { rememberMe = !rememberMe }
                 ) {
-                    Checkbox(
-                        checked = rememberMe,
-                        onCheckedChange = { rememberMe = it }
-                    )
+                    Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
                     Text("Remember me", fontSize = 13.sp)
                 }
-
-                Text(
-                    "Forgot Password?",
-                    color = Color.Gray,
-                    fontSize = 13.sp
-                )
+                Text("Forgot Password?", color = Color.Gray, fontSize = 13.sp)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -162,37 +138,31 @@ fun LoginScreen(
             Button(
                 onClick = {
                     if (username.isBlank() || password.isBlank()) {
-                        Toast.makeText(
-                            context,
-                            "Username dan password tidak boleh kosong",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, "Username dan password wajib diisi", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
                     isLoading = true
                     scope.launch {
                         try {
-                            userPrefsRepo.saveLoginCredentials(
-                                username,
-                                password,
-                                rememberMe
-                            )
+                            // 1. Simpan pengaturan Remember Me
+                            userPrefsRepo.saveLoginCredentials(username, password, rememberMe)
 
-                            // 1️⃣ LOGIN
+                            // 2. Eksekusi Login
                             val request = LoginRequest(username, password)
                             val response = RetrofitClient.instance.loginUser(request)
 
                             if (response.success && response.token != null && response.user != null) {
-
+                                // Simpan Token
                                 userPrefsRepo.saveToken(response.token)
 
                                 val profile = response.user
-                                val fullImageUrl =
-                                    "http://10.0.2.2:3000${profile.profile_image}"
+                                val fullImageUrl = "http://10.0.2.2:3000${profile.profile_image}"
 
-
+                                // ✅ SIMPAN LENGKAP (Termasuk ID untuk sinkronisasi AsisLearn)
+                                // Pastikan fungsi saveFullProfile di repository sudah kamu update untuk menerima profile.id
                                 userPrefsRepo.saveFullProfile(
+                                    userId = profile.id, // ID ini kunci agar tombol Edit/Hapus muncul
                                     fullName = profile.full_name,
                                     username = profile.username,
                                     email = profile.email,
@@ -202,64 +172,40 @@ fun LoginScreen(
                                     profileImage = fullImageUrl
                                 )
 
+                                Toast.makeText(context, "Login Berhasil", Toast.LENGTH_SHORT).show()
                                 onLoginSuccess()
                             } else {
-                                Toast.makeText(
-                                    context,
-                                    "Login gagal",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Toast.makeText(context, "Login gagal: Akun tidak ditemukan", Toast.LENGTH_SHORT).show()
                             }
 
                         } catch (e: Exception) {
-                            Toast.makeText(
-                                context,
-                                "Terjadi kesalahan: ${e.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast.makeText(context, "Koneksi Error: ${e.message}", Toast.LENGTH_SHORT).show()
                         } finally {
                             isLoading = false
                         }
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF00BFA6)
-                ),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00BFA6)),
                 shape = RoundedCornerShape(24.dp),
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                 } else {
-                    Text(
-                        text = "Log In",
-                        color = Color.White,
-                        fontSize = 16.sp
-                    )
+                    Text(text = "Log In", color = Color.White, fontSize = 16.sp)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 Text("Belum punya akun? ", color = Color.Gray)
                 Text(
                     text = "Sign Up",
                     color = Color(0xFF00BFA6),
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable {
-                        onNavigateToRegister()
-                    }
+                    modifier = Modifier.clickable { onNavigateToRegister() }
                 )
             }
         }

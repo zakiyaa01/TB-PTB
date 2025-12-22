@@ -14,11 +14,7 @@ import com.example.asistalk.ui.asislearn.*
 import com.example.asistalk.ui.auth.LoginScreen
 import com.example.asistalk.ui.auth.RegisterScreen
 import com.example.asistalk.ui.home.HomeScreen
-import com.example.asistalk.ui.profile.AboutScreen
-import com.example.asistalk.ui.profile.ProfileScreen
-import com.example.asistalk.ui.profile.ProfileViewModel
-import com.example.asistalk.ui.profile.SettingsScreen
-import com.example.asistalk.ui.profile.YourProfileScreen
+import com.example.asistalk.ui.profile.*
 
 @Composable
 fun NavGraph(
@@ -42,7 +38,6 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
         startDestination = "login",
         route = Graph.AUTHENTICATION
     ) {
-
         composable("login") {
             LoginScreen(
                 onLoginSuccess = {
@@ -55,7 +50,6 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
                 }
             )
         }
-
         composable("register") {
             RegisterScreen(
                 onNavigateBackToLogin = {
@@ -66,16 +60,13 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
     }
 }
 
-// FUNGSI INI SEKARANG MENJADI NAVHOST UNTUK KONTEN UTAMA
 @Composable
 fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
-
     NavHost(
         navController = navController,
         startDestination = "home",
         modifier = modifier
     ) {
-
         // HOME
         composable("home") { backStackEntry ->
             val asisLearnViewModel: AsisLearnViewModel = viewModel(backStackEntry)
@@ -83,128 +74,80 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         }
 
         // ============================================================
-        // ASISLEARN GRAPH (Shared ViewModel - Sintaks Diperbaiki)
+        // ASISLEARN GRAPH (Upload & Edit Digabung)
         // ============================================================
         navigation(
-            startDestination = "asislearn_main", // Rute start yang benar
-            route = "asislearn"                  // Rute graph yang benar
+            startDestination = "asislearn_main",
+            route = "asislearn"
         ) {
-
-            // List materi
+            // Screen Utama List Materi
             composable("asislearn_main") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("asislearn")
                 }
                 val vm: AsisLearnViewModel = viewModel(parentEntry)
-
                 AsisLearnScreen(navController = navController, viewModel = vm)
             }
 
-            // Upload materi
+            // Screen Form (Digunakan untuk Upload DAN Edit)
             composable("uploadMaterial") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("asislearn")
                 }
                 val vm: AsisLearnViewModel = viewModel(parentEntry)
 
-                UploadMaterialScreen(navController = navController, viewModel = vm)
-            }
+                // Token sementara, pastikan diambil dari session login asli
+                val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJzdWNpIiwiaWF0IjoxNzY2MzgwNjY1LCJleHAiOjE3NjY5ODU0NjV9.DeqL3KcxXLdZWJJUNXMKzykND85yyijwtbpWyWew8ls"
 
-            // Lihat materi
-            composable(
-                route = "materialDetail/{materialTitle}",
-                arguments = listOf(navArgument("materialTitle") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry("asislearn")
-                }
-                val vm: AsisLearnViewModel = viewModel(parentEntry)
-
-                val materialTitle = backStackEntry.arguments?.getString("materialTitle") ?: ""
-
-                LihatScreen(
+                UploadMaterialScreen(
                     navController = navController,
                     viewModel = vm,
-                    materialTitle = materialTitle
+                    token = token
                 )
             }
 
-            // EDIT MATERI
-            composable(
-                route = "editMaterial/{materialId}", // Menggunakan materialId (yang isinya adalah Title)
-                arguments = listOf(navArgument("materialId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry("asislearn")
-                }
-                val vm: AsisLearnViewModel = viewModel(parentEntry)
-
-                val materialId = backStackEntry.arguments?.getString("materialId") ?: ""
-
-                EditMaterialScreen(
-                    navController = navController,
-                    viewModel = vm,
-                    materialId = materialId // Meneruskan ID ke EditMaterialScreen
-                )
-            }
+            // Note: Rute "materialDetail" dan "editMaterial" dihapus karena
+            // fungsinya sudah dicover oleh "asislearn_main" dan "uploadMaterial"
         }
 
         // ============================================================
-        // ASISHUB GRAPH (Shared ViewModel - Tidak Diubah)
+        // ASISHUB & PROFILE GRAPH (Tetap Sama)
         // ============================================================
-        navigation(
-            startDestination = "asishub_main",
-            route = "asishub"
-        ) {
-
+        navigation(startDestination = "asishub_main", route = "asishub") {
             composable("asishub_main") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("asishub") }
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
                 AsisHubScreen(navController = navController, vm = asisHubViewModel)
             }
-
             composable("createPost") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("asishub") }
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
                 CreatePostScreen(navController = navController, vm = asisHubViewModel)
             }
-
             composable("postDetail") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("asishub") }
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
                 PostDetailScreen(navController = navController, vm = asisHubViewModel)
             }
-
             composable("editPost") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("asishub") }
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
                 EditPostScreen(navController = navController, vm = asisHubViewModel)
             }
-
-            composable("notif") {
-                NotificationScreen(navController = navController)
-            }
+            composable("notif") { NotificationScreen(navController = navController) }
         }
 
-        // ============================================================
-        // PROFILE GRAPH (Nested Graph - Tidak Diubah)
-        // ============================================================
-        navigation(
-            startDestination = "profile_main",
-            route = "profile"
-        ) {
+        navigation(startDestination = "profile_main", route = "profile") {
             composable("profile_main") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("profile") }
                 val profileViewModel: ProfileViewModel = viewModel(parentEntry)
                 ProfileScreen(navController = navController, profileViewModel = profileViewModel)
             }
-
             composable("yourProfile") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("profile") }
                 val profileViewModel: ProfileViewModel = viewModel(parentEntry)
                 YourProfileScreen(navController = navController, profileViewModel = profileViewModel)
             }
-
             composable("settings") { SettingsScreen(navController = navController) }
             composable("about") { AboutScreen(navController = navController) }
         }
