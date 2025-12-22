@@ -15,6 +15,9 @@ import com.example.asistalk.ui.auth.LoginScreen
 import com.example.asistalk.ui.auth.RegisterScreen
 import com.example.asistalk.ui.home.HomeScreen
 import com.example.asistalk.ui.profile.*
+import androidx.navigation.NavType
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 
 @Composable
 fun NavGraph(
@@ -97,7 +100,8 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                 val vm: AsisLearnViewModel = viewModel(parentEntry)
 
                 // Token sementara, pastikan diambil dari session login asli
-                val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJzdWNpIiwiaWF0IjoxNzY2MzgwNjY1LCJleHAiOjE3NjY5ODU0NjV9.DeqL3KcxXLdZWJJUNXMKzykND85yyijwtbpWyWew8ls"
+                val token =
+                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJzdWNpIiwiaWF0IjoxNzY2MzgwNjY1LCJleHAiOjE3NjY5ODU0NjV9.DeqL3KcxXLdZWJJUNXMKzykND85yyijwtbpWyWew8ls"
 
                 UploadMaterialScreen(
                     navController = navController,
@@ -105,11 +109,29 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                     token = token
                 )
             }
+            composable(
+                route = "detailMaterial/{materialId}",
+                arguments = listOf(
+                    navArgument("materialId") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                // 1. Ambil ID dari argumen
+                val id = backStackEntry.arguments?.getInt("materialId") ?: 0
 
-            // Note: Rute "materialDetail" dan "editMaterial" dihapus karena
-            // fungsinya sudah dicover oleh "asislearn_main" dan "uploadMaterial"
+                // 2. Ambil Parent Entry agar ViewModel-nya sama (Shared) dengan List & Upload
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("asislearn")
+                }
+                val vm: AsisLearnViewModel = viewModel(parentEntry)
+
+                // 3. Masukkan variabel 'vm' ke parameter viewModel
+                MaterialDetailScreen(
+                    materialId = id,
+                    navController = navController,
+                    viewModel = vm // Gunakan variabel 'vm', bukan kata kunci 'viewModel'
+                )
+            }
         }
-
         // ============================================================
         // ASISHUB & PROFILE GRAPH (Tetap Sama)
         // ============================================================

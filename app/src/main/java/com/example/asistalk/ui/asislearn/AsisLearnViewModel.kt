@@ -23,29 +23,37 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.FileOutputStream
+import androidx.compose.runtime.mutableIntStateOf
 
 class AsisLearnViewModel : ViewModel() {
 
     private val apiService = RetrofitClient.instance
 
-    // Master data agar filter tidak perlu hit API terus menerus
+    // --- DATA STATE ---
     private val _allMaterials = MutableStateFlow<List<MaterialItem>>(emptyList())
 
-    // Data yang ditampilkan ke UI (setelah filter)
     private val _materials = MutableStateFlow<List<MaterialItem>>(emptyList())
     val materials = _materials.asStateFlow()
 
-    // Form States
+    private val _selectedMaterial = MutableStateFlow<MaterialItem?>(null)
+    val selectedMaterial = _selectedMaterial.asStateFlow()
+
+    // --- FORM & UI STATE ---
     private val _subject = MutableStateFlow("")
     val subject = _subject.asStateFlow()
+
     private val _topic = MutableStateFlow("")
     val topic = _topic.asStateFlow()
+
     private val _description = MutableStateFlow("")
     val description = _description.asStateFlow()
+
     private val _fileType = MutableStateFlow("PDF")
     val fileType = _fileType.asStateFlow()
+
     private val _selectedFileUri = MutableStateFlow<Uri?>(null)
     val selectedFileUri = _selectedFileUri.asStateFlow()
+
     private val _currentFileName = MutableStateFlow("")
     val currentFileName = _currentFileName.asStateFlow()
 
@@ -55,28 +63,24 @@ class AsisLearnViewModel : ViewModel() {
     private val _uploadEvent = MutableStateFlow<Boolean?>(null)
     val uploadEvent = _uploadEvent.asStateFlow()
 
-    // --- DATA USER LOGIN (Dinamis dari Session) ---
+    // --- SESSION & FILTER STATE ---
     var currentUserId by mutableStateOf(-1)
     var currentUserToken by mutableStateOf("")
-
-    var selectedTabIndex by mutableStateOf(0)
-    var searchQuery by mutableStateOf("")
-
-    // ✅ KEMBALI: Fungsi sapaan nama lengkap di Home
     var currentUserFullName by mutableStateOf("")
 
+    var selectedTabIndex by mutableIntStateOf(0)
+    var searchQuery by mutableStateOf("")
     var editingMaterialId: Int? = null
 
-    /**
-     * FUNGSI SESSI: Mengisi identitas user lengkap
-     */
+    // --- SESSION MANAGEMENT ---
     fun setSession(id: Int, token: String, fullName: String) {
         currentUserId = id
         currentUserToken = token
-        currentUserFullName = fullName // Menyimpan nama untuk sapaan di Home
+        currentUserFullName = fullName
         Log.d("AsisLearnVM", "Session Updated - User: $fullName (ID: $id)")
     }
 
+    // --- CORE LOGIC: FETCH & FILTER ---
     fun fetchAllMaterials() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -84,7 +88,7 @@ class AsisLearnViewModel : ViewModel() {
                 val response = apiService.getAllMaterials()
                 if (response.success) {
                     _allMaterials.value = response.data
-                    filterMaterials() // filter sesuai tab & search saat ini
+                    filterMaterials()
                 }
             } catch (e: Exception) {
                 Log.e("AsisLearnVM", "Fetch Error: ${e.message}")
@@ -97,23 +101,26 @@ class AsisLearnViewModel : ViewModel() {
     fun filterMaterials() {
         var filtered = _allMaterials.value
 
-        filtered = when (selectedTabIndex) {
-            1 -> filtered.filter { it.user_id == currentUserId } // My Material
-            else -> filtered
+        // Filter by Tab (0: All, 1: My Material)
+        if (selectedTabIndex == 1) {
+            filtered = filtered.filter { it.user_id == currentUserId }
         }
 
+        // Filter by Search Query
         if (searchQuery.isNotEmpty()) {
             filtered = filtered.filter {
                 it.subject.contains(searchQuery, ignoreCase = true) ||
                         it.topic.contains(searchQuery, ignoreCase = true)
             }
         }
-
         _materials.value = filtered
     }
 
+    fun getDetailFromList(id: Int) {
+        _selectedMaterial.value = _allMaterials.value.find { it.id == id }
+    }
 
-    // --- Action Methods ---
+    // --- ACTION METHODS ---
     fun onSubjectChange(v: String) { _subject.value = v }
     fun onTopicChange(v: String) { _topic.value = v }
     fun onDescriptionChange(v: String) { _description.value = v }
@@ -133,6 +140,7 @@ class AsisLearnViewModel : ViewModel() {
         _currentFileName.value = item.file_path.substringAfterLast("/")
     }
 
+    // --- API ACTIONS: UPLOAD, UPDATE, DELETE ---
     fun uploadMaterial(context: Context, token: String) {
         val uri = _selectedFileUri.value ?: return
         viewModelScope.launch {
@@ -196,12 +204,8 @@ class AsisLearnViewModel : ViewModel() {
             try {
                 val response = apiService.deleteMaterial("Bearer $token", id)
                 if (response.success) {
-                    // 1. Hapus item dari _allMaterials
                     _allMaterials.value = _allMaterials.value.filter { it.id != id }
-                    // 2. Filter ulang supaya UI ter-update
                     filterMaterials()
-                } else {
-                    Log.e("DeleteError", "Gagal hapus: response.success=false")
                 }
             } catch (e: Exception) {
                 Log.e("DeleteError", "Gagal hapus: ${e.message}")
@@ -211,7 +215,7 @@ class AsisLearnViewModel : ViewModel() {
         }
     }
 
-
+    // --- HELPERS ---
     fun consumeUploadEvent() { _uploadEvent.value = null }
 
     fun resetInputStates() {
@@ -224,7 +228,6 @@ class AsisLearnViewModel : ViewModel() {
         editingMaterialId = null
     }
 
-    // --- Helpers ---
     private fun createPart(v: String): RequestBody = v.toRequestBody("text/plain".toMediaTypeOrNull())
 
     private fun createMultipart(f: File): MultipartBody.Part {
@@ -235,10 +238,10 @@ class AsisLearnViewModel : ViewModel() {
     private fun getFileName(uri: Uri, context: Context): String {
         var name = ""
         try {
-            context.contentResolver.query(uri, null, null, null, null)?.use {
-                if (it.moveToFirst()) {
-                    val index = it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
-                    name = it.getString(index)
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
+                    name = cursor.getString(index)
                 }
             }
         } catch (e: Exception) { name = "" }

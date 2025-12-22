@@ -213,12 +213,19 @@ fun MaterialCard(
             Spacer(Modifier.height(16.dp))
 
             OutlinedButton(
-                onClick = { /* Navigasi Detail */ },
+                onClick = {
+                    // Aksi navigasi ke route detailMaterial dengan membawa ID materi
+                    navController.navigate("detailMaterial/${item.id}")
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
             ) {
-                Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = "Detail",
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(Modifier.width(8.dp))
                 Text("Lihat Materi", fontWeight = FontWeight.SemiBold)
             }
