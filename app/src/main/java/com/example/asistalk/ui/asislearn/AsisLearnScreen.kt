@@ -1,5 +1,6 @@
 package com.example.asistalk.ui.asislearn
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,16 +16,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.asistalk.R
 import com.example.asistalk.network.MaterialItem
 import com.example.asistalk.utils.UserPreferencesRepository
 import kotlinx.coroutines.flow.first
-import androidx.compose.ui.res.painterResource
-import com.example.asistalk.R
-
 
 @Composable
 fun AsisLearnScreen(
@@ -32,7 +32,6 @@ fun AsisLearnScreen(
     viewModel: AsisLearnViewModel
 ) {
     val context = LocalContext.current
-    // Inisialisasi Repository untuk mengambil ID & Token
     val userPrefsRepo = remember { UserPreferencesRepository(context) }
 
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -42,31 +41,30 @@ fun AsisLearnScreen(
     val materials by viewModel.materials.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    // Set session & fetch materi
     LaunchedEffect(Unit) {
         val id = userPrefsRepo.userIdFlow.first()
         val token = userPrefsRepo.getToken()
         val fullName = userPrefsRepo.fullnameFlow.first()
-
         viewModel.setSession(id, token, fullName)
         viewModel.fetchAllMaterials()
     }
 
-    // Filter otomatis secara reaktif
-    LaunchedEffect(selectedTab, searchQuery, materials) {
-        viewModel.filterMaterials(searchQuery, selectedTab)
+    // Filter reaktif tanpa loop
+    LaunchedEffect(selectedTab, searchQuery) {
+        viewModel.selectedTabIndex = selectedTab
+        viewModel.searchQuery = searchQuery
+        viewModel.filterMaterials()
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-
-            // --- HEADER: SEARCH + UPLOAD ---
+            // HEADER: SEARCH + UPLOAD
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -103,7 +101,7 @@ fun AsisLearnScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // --- TAB NAVIGATION ---
+            // TAB NAVIGATION
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.Transparent,
@@ -135,23 +133,27 @@ fun AsisLearnScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // --- LIST CONTENT ---
-            if (isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(strokeWidth = 3.dp)
+            // LIST CONTENT
+            when {
+                isLoading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(strokeWidth = 3.dp)
+                    }
                 }
-            } else if (materials.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Materi tidak ditemukan", color = Color.Gray)
+                materials.isEmpty() -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Materi tidak ditemukan", color = Color.Gray)
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    items(materials, key = { it.id }) { item ->
-                        MaterialCard(item, navController, viewModel)
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
+                        items(materials, key = { it.id }) { item ->
+                            MaterialCard(item, navController, viewModel)
+                        }
                     }
                 }
             }
@@ -165,8 +167,11 @@ fun MaterialCard(
     navController: NavHostController,
     viewModel: AsisLearnViewModel
 ) {
+    val isLoading by viewModel.isLoading.collectAsState()
     val isMyMaterial = item.user_id == viewModel.currentUserId
-    val token = viewModel.currentUserToken
+
+    // Dialog state
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -246,14 +251,28 @@ fun MaterialCard(
                         Icon(Icons.Default.Edit, null, tint = Color.Gray)
                     }
 
-                    if (isMyMaterial) {
-                        IconButton(
-                            onClick = {
-                                viewModel.deleteMaterial(item.id, viewModel.currentUserToken)
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        enabled = !isLoading
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Hapus Materi", tint = Color.Red)
+                    }
+
+                    if (showDeleteDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showDeleteDialog = false },
+                            title = { Text("Hapus Materi?") },
+                            text = { Text("Apakah Anda yakin ingin menghapus materi ini?") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    viewModel.deleteMaterial(item.id, viewModel.currentUserToken)
+                                    showDeleteDialog = false
+                                }) { Text("Hapus") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") }
                             }
-                        ) {
-                            Icon(Icons.Default.Delete, null, tint = Color.Red)
-                        }
+                        )
                     }
                 }
             }

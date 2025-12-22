@@ -59,6 +59,9 @@ class AsisLearnViewModel : ViewModel() {
     var currentUserId by mutableStateOf(-1)
     var currentUserToken by mutableStateOf("")
 
+    var selectedTabIndex by mutableStateOf(0)
+    var searchQuery by mutableStateOf("")
+
     // ✅ KEMBALI: Fungsi sapaan nama lengkap di Home
     var currentUserFullName by mutableStateOf("")
 
@@ -78,11 +81,10 @@ class AsisLearnViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Sekarang menggunakan token untuk akses API
                 val response = apiService.getAllMaterials()
                 if (response.success) {
                     _allMaterials.value = response.data
-                    filterMaterials("", 0)
+                    filterMaterials() // filter sesuai tab & search saat ini
                 }
             } catch (e: Exception) {
                 Log.e("AsisLearnVM", "Fetch Error: ${e.message}")
@@ -92,20 +94,24 @@ class AsisLearnViewModel : ViewModel() {
         }
     }
 
-    fun filterMaterials(query: String, tabIndex: Int) {
+    fun filterMaterials() {
         var filtered = _allMaterials.value
-        filtered = when (tabIndex) {
-            1 -> filtered.filter { it.user_id == currentUserId }
+
+        filtered = when (selectedTabIndex) {
+            1 -> filtered.filter { it.user_id == currentUserId } // My Material
             else -> filtered
         }
-        if (query.isNotEmpty()) {
+
+        if (searchQuery.isNotEmpty()) {
             filtered = filtered.filter {
-                it.subject.contains(query, ignoreCase = true) ||
-                        it.topic.contains(query, ignoreCase = true)
+                it.subject.contains(searchQuery, ignoreCase = true) ||
+                        it.topic.contains(searchQuery, ignoreCase = true)
             }
         }
+
         _materials.value = filtered
     }
+
 
     // --- Action Methods ---
     fun onSubjectChange(v: String) { _subject.value = v }
@@ -189,7 +195,14 @@ class AsisLearnViewModel : ViewModel() {
             _isLoading.value = true
             try {
                 val response = apiService.deleteMaterial("Bearer $token", id)
-                if (response.success) fetchAllMaterials()
+                if (response.success) {
+                    // 1. Hapus item dari _allMaterials
+                    _allMaterials.value = _allMaterials.value.filter { it.id != id }
+                    // 2. Filter ulang supaya UI ter-update
+                    filterMaterials()
+                } else {
+                    Log.e("DeleteError", "Gagal hapus: response.success=false")
+                }
             } catch (e: Exception) {
                 Log.e("DeleteError", "Gagal hapus: ${e.message}")
             } finally {
@@ -197,6 +210,7 @@ class AsisLearnViewModel : ViewModel() {
             }
         }
     }
+
 
     fun consumeUploadEvent() { _uploadEvent.value = null }
 
