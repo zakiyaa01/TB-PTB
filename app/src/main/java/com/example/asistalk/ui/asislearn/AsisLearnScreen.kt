@@ -250,10 +250,11 @@ fun MaterialCard(
                 if (isMyMaterial) {
                     IconButton(onClick = {
                         viewModel.setEditData(item)
-                        navController.navigate("uploadMaterial")
+                        navController.navigate("editMaterial")
                     }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit Materi", tint = Color.Gray)
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray)
                     }
+                }
 
                     IconButton(
                         onClick = { showDeleteDialog = true },
@@ -289,4 +290,3 @@ fun MaterialCard(
             }
         }
     }
-}

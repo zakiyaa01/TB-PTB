@@ -122,6 +122,14 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                     viewModel = vm
                 )
             }
+
+            composable("editMaterial") { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("asislearn")
+                }
+                val vm: AsisLearnViewModel = viewModel(parentEntry)
+                EditMaterialScreen(navController = navController, viewModel = vm)
+            }
         }
 
         // ============================================================

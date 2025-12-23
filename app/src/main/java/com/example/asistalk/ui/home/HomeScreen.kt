@@ -98,7 +98,7 @@ fun HomeScreen(
                 item { LoadingIndicator() }
             } else {
                 // Menampilkan 3 materi terbaru saja di Home
-                items(materials.take(3)) { material ->
+                items(materials.take(2)) { material ->
                     NewMaterialCard(material) {
                         // Navigasi ke detail materi dengan ID
                         navController.navigate("detailMaterial/${material.id}")
