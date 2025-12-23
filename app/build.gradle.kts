@@ -59,6 +59,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.3")
     implementation("androidx.activity:activity-ktx:1.9.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("androidx.webkit:webkit:1.8.0")
 
     // Retrofit untuk koneksi API
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

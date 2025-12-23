@@ -1,14 +1,17 @@
 package com.example.asistalk.ui.asislearn
 
 import android.app.Application
+import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
+import android.os.Environment
 import android.provider.OpenableColumns
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.asistalk.network.MaterialItem
@@ -28,7 +31,6 @@ import java.io.FileOutputStream
 
 class AsisLearnViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Inisialisasi Repository
     private val apiService = RetrofitClient.getInstance(application.applicationContext)
     private val repository = AsisLearnRepository(apiService)
 
@@ -40,22 +42,21 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
     private val _selectedMaterial = MutableStateFlow<MaterialItem?>(null)
     val selectedMaterial = _selectedMaterial.asStateFlow()
 
+    // State untuk menyimpan ID materi yang sudah ada di folder Download lokal
+    private val _downloadedIds = MutableStateFlow<Set<Int>>(emptySet())
+    val downloadedIds = _downloadedIds.asStateFlow()
+
     // --- FORM & UI STATE ---
     private val _subject = MutableStateFlow("")
     val subject = _subject.asStateFlow()
-
     private val _topic = MutableStateFlow("")
     val topic = _topic.asStateFlow()
-
     private val _description = MutableStateFlow("")
     val description = _description.asStateFlow()
-
     private val _fileType = MutableStateFlow("PDF")
     val fileType = _fileType.asStateFlow()
-
     private val _selectedFileUri = MutableStateFlow<Uri?>(null)
     val selectedFileUri = _selectedFileUri.asStateFlow()
-
     private val _currentFileName = MutableStateFlow("")
     val currentFileName = _currentFileName.asStateFlow()
 
@@ -77,12 +78,12 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         currentUserFullName = fullName
     }
 
-    // --- CORE LOGIC MENGGUNAKAN REPOSITORY ---
+    // --- FETCH DATA ---
     fun fetchAllMaterials() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = repository.getAllMaterials() // Panggil Repository
+                val response = repository.getAllMaterials()
                 if (response.success) {
                     _allMaterials.value = response.data
                     filterMaterials()
@@ -95,11 +96,15 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    // --- LOGIKA FILTER (Termasuk Tab Download) ---
     fun filterMaterials() {
         var filtered = _allMaterials.value
-        if (selectedTabIndex == 1) {
-            filtered = filtered.filter { it.user_id == currentUserId }
+
+        when (selectedTabIndex) {
+            1 -> filtered = filtered.filter { it.user_id == currentUserId }
+            2 -> filtered = filtered.filter { downloadedIds.value.contains(it.id) }
         }
+
         if (searchQuery.isNotEmpty()) {
             filtered = filtered.filter {
                 it.subject.contains(searchQuery, ignoreCase = true) ||
@@ -109,8 +114,50 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _materials.value = filtered
     }
 
-    fun getDetailFromList(id: Int) {
-        _selectedMaterial.value = _allMaterials.value.find { it.id == id }
+    // --- FUNGSI DOWNLOAD ---
+    fun downloadMaterial(context: Context, url: String, subject: String) {
+        try {
+            val adjustedUrl = url.replace("localhost", "10.0.2.2")
+            // Nama file harus konsisten dengan checkDownloadedMaterials
+            val fileName = "${subject.replace(" ", "_")}.pdf"
+
+            val request = DownloadManager.Request(Uri.parse(adjustedUrl))
+                .setTitle("Mengunduh Materi")
+                .setDescription(subject)
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                .setAllowedOverMetered(true)
+
+            val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            manager.enqueue(request)
+
+            Toast.makeText(context, "Unduhan dimulai...", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e("DownloadError", e.message.toString())
+            Toast.makeText(context, "Gagal mengunduh", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // --- FUNGSI CEK FILE LOKAL (Untuk Tab Download) ---
+    fun checkDownloadedMaterials(context: Context, allMaterials: List<MaterialItem>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val downloadedSet = mutableSetOf<Int>()
+            allMaterials.forEach { item ->
+                val fileName = "${item.subject.replace(" ", "_")}.pdf"
+                val file = File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    fileName
+                )
+                if (file.exists()) {
+                    downloadedSet.add(item.id)
+                }
+            }
+            _downloadedIds.value = downloadedSet
+            // Refresh tampilan setelah cek selesai
+            withContext(Dispatchers.Main) {
+                filterMaterials()
+            }
+        }
     }
 
     // --- ACTION METHODS ---
@@ -122,6 +169,10 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
     fun onFileSelected(uri: Uri?, context: Context) {
         _selectedFileUri.value = uri
         _currentFileName.value = uri?.let { getFileName(it, context) } ?: ""
+    }
+
+    fun getDetailFromList(id: Int) {
+        _selectedMaterial.value = _allMaterials.value.find { it.id == id }
     }
 
     fun setEditData(item: MaterialItem) {
@@ -140,7 +191,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 val file = withContext(Dispatchers.IO) { uriToFile(uri, context) }
                 file?.let {
-                    val response = repository.uploadMaterial( // Panggil Repository
+                    val response = repository.uploadMaterial(
                         createPart(_subject.value),
                         createPart(_topic.value),
                         createPart(_description.value),
@@ -169,7 +220,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                     file?.let { filePart = createMultipart(it) }
                 }
 
-                val response = repository.updateMaterial( // Panggil Repository
+                val response = repository.updateMaterial(
                     id,
                     createPart(_subject.value),
                     createPart(_topic.value),
@@ -191,7 +242,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = repository.deleteMaterial(id) // Panggil Repository
+                val response = repository.deleteMaterial(id)
                 if (response.success) {
                     _allMaterials.value = _allMaterials.value.filter { it.id != id }
                     filterMaterials()
@@ -204,8 +255,8 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- HELPERS ---
     fun consumeUploadEvent() { _uploadEvent.value = null }
+
     fun resetInputStates() {
         _subject.value = ""
         _topic.value = ""
@@ -216,7 +267,9 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         editingMaterialId = null
     }
 
+    // --- HELPERS ---
     private fun createPart(v: String): RequestBody = v.toRequestBody("text/plain".toMediaTypeOrNull())
+
     private fun createMultipart(f: File): MultipartBody.Part {
         val requestFile = f.asRequestBody("application/octet-stream".toMediaTypeOrNull())
         return MultipartBody.Part.createFormData("file", f.name, requestFile)

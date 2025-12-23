@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,7 +35,6 @@ fun MaterialDetailScreen(
     viewModel: AsisLearnViewModel
 ) {
     val context = LocalContext.current
-    // Mengambil state selectedMaterial dari ViewModel secara reaktif
     val material by viewModel.selectedMaterial.collectAsState()
 
     // Ambil detail materi dari list lokal di ViewModel saat screen dibuka
@@ -43,15 +43,13 @@ fun MaterialDetailScreen(
     }
 
     /**
-     * Fungsi untuk membuka file di Emulator/HP.
-     * Sudah menggunakan replace localhost ke 10.0.2.2 agar bisa akses backend.
+     * Fungsi untuk membuka/preview file langsung di aplikasi eksternal (PDF Viewer/Browser)
      */
     fun openFile(url: String) {
         try {
             val adjustedUrl = url.replace("localhost", "10.0.2.2")
             val uri = Uri.parse(adjustedUrl)
 
-            // Deteksi MimeType otomatis
             val extension = MimeTypeMap.getFileExtensionFromUrl(adjustedUrl)
             val type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
 
@@ -65,13 +63,11 @@ fun MaterialDetailScreen(
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
-            // Menggunakan Chooser agar user bisa pilih MuPDF atau Browser
             val chooser = Intent.createChooser(intent, "Buka materi dengan...")
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(chooser)
 
         } catch (e: Exception) {
-            // Fallback ke browser jika aplikasi spesifik tidak ada
             try {
                 val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url.replace("localhost", "10.0.2.2")))
                 browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -88,7 +84,7 @@ fun MaterialDetailScreen(
                 title = { Text("Detail Materi", fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -102,7 +98,7 @@ fun MaterialDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .background(Color(0xFFF8FAFC))
             ) {
-                // --- HEADER DENGAN GRADIENT ---
+                // --- HEADER GRADIENT ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -143,7 +139,7 @@ fun MaterialDetailScreen(
                     }
                 }
 
-                // --- KARTU INFORMASI ---
+                // --- CONTENT CARD ---
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -190,7 +186,7 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(32.dp))
 
-                        // Tombol Lihat (Tanpa Token manual karena Interceptor sudah menangani auth)
+                        // TOMBOL LIHAT (Preview)
                         Button(
                             onClick = { openFile(item.file_path) },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -204,9 +200,16 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(12.dp))
 
-                        // Tombol Download
+                        // TOMBOL DOWNLOAD
                         OutlinedButton(
-                            onClick = { openFile(item.file_path) },
+                            onClick = {
+                                // ✅ PERBAIKAN: Menyertakan parameter 'context' sesuai fungsi di ViewModel terbaru
+                                viewModel.downloadMaterial(
+                                    context = context,
+                                    url = item.file_path,
+                                    subject = item.subject
+                                )
+                            },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             border = androidx.compose.foundation.BorderStroke(1.5.dp, Primary)
@@ -220,7 +223,6 @@ fun MaterialDetailScreen(
                 Spacer(Modifier.height(20.dp))
             }
         } ?: run {
-            // Loading state jika data materi belum tersedia
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Primary)
             }

@@ -16,12 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.asistalk.R
 import com.example.asistalk.network.MaterialItem
 import com.example.asistalk.utils.UserPreferencesRepository
 import kotlinx.coroutines.flow.first
@@ -31,6 +29,7 @@ fun AsisLearnScreen(
     navController: NavHostController,
     viewModel: AsisLearnViewModel
 ) {
+    // 1. Ambil Context di level Screen utama
     val context = LocalContext.current
     val userPrefsRepo = remember { UserPreferencesRepository(context) }
 
@@ -41,21 +40,25 @@ fun AsisLearnScreen(
     val materials by viewModel.materials.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    // Set session & fetch materi
+    // Ambil Session & Fetch Materi Pertama Kali
     LaunchedEffect(Unit) {
         val id = userPrefsRepo.userIdFlow.first()
-        // Token tidak perlu diambil lagi di sini karena sudah dihandle AuthInterceptor
         val fullName = userPrefsRepo.fullnameFlow.first()
 
-        // Memanggil setSession tanpa parameter token
         viewModel.setSession(id, fullName)
         viewModel.fetchAllMaterials()
     }
 
-    // Filter reaktif
-    LaunchedEffect(selectedTab, searchQuery) {
+    // Filter reaktif & Cek Download jika tab Download diklik
+    LaunchedEffect(selectedTab, searchQuery, materials) {
         viewModel.selectedTabIndex = selectedTab
         viewModel.searchQuery = searchQuery
+
+        // Pemicu pengecekan file lokal jika masuk ke tab Download
+        if (selectedTab == 2) {
+            viewModel.checkDownloadedMaterials(context, materials)
+        }
+
         viewModel.filterMaterials()
     }
 
@@ -97,7 +100,7 @@ fun AsisLearnScreen(
                 ) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Upload Materi", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("Upload", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
 
@@ -154,7 +157,8 @@ fun AsisLearnScreen(
                         contentPadding = PaddingValues(bottom = 24.dp)
                     ) {
                         items(materials, key = { it.id }) { item ->
-                            MaterialCard(item, navController, viewModel)
+                            // Kirim context ke MaterialCard
+                            MaterialCard(item, navController, viewModel, context)
                         }
                     }
                 }
@@ -167,7 +171,8 @@ fun AsisLearnScreen(
 fun MaterialCard(
     item: MaterialItem,
     navController: NavHostController,
-    viewModel: AsisLearnViewModel
+    viewModel: AsisLearnViewModel,
+    context: Context // 2. Tambahkan parameter context di sini
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -214,18 +219,12 @@ fun MaterialCard(
             Spacer(Modifier.height(16.dp))
 
             OutlinedButton(
-                onClick = {
-                    navController.navigate("detailMaterial/${item.id}")
-                },
+                onClick = { navController.navigate("detailMaterial/${item.id}") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Visibility,
-                    contentDescription = "Detail",
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(Icons.Default.Visibility, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Lihat Materi", fontWeight = FontWeight.SemiBold)
             }
@@ -238,55 +237,61 @@ fun MaterialCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.LightGray)
+                    Icon(Icons.Default.Person, null, modifier = Modifier.size(14.dp), tint = Color.LightGray)
                     Spacer(Modifier.width(4.dp))
                     Text(item.author_name, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 }
 
-                IconButton(onClick = { /* Implementasi Download Besok */ }) {
-                    Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                // TOMBOL DOWNLOAD
+                IconButton(onClick = {
+                    // Gunakan context yang dikirim dari Screen utama
+                    viewModel.downloadMaterial(
+                        context = context,
+                        url = item.file_path,
+                        subject = item.subject
+                    )
+                }) {
+                    Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
                 }
 
                 if (isMyMaterial) {
+                    // TOMBOL EDIT
                     IconButton(onClick = {
                         viewModel.setEditData(item)
                         navController.navigate("editMaterial")
                     }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray)
+                        Icon(Icons.Default.Edit, null, tint = Color.Gray)
                     }
-                }
 
+                    // TOMBOL HAPUS
                     IconButton(
                         onClick = { showDeleteDialog = true },
                         enabled = !isLoading
                     ) {
-                        Icon(Icons.Default.Delete, contentDescription = "Hapus Materi", tint = Color.Red)
-                    }
-
-                    if (showDeleteDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showDeleteDialog = false },
-                            title = { Text("Hapus Materi?") },
-                            text = { Text("Apakah Anda yakin ingin menghapus materi ini?") },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        // Panggilan delete tanpa parameter token manual
-                                        viewModel.deleteMaterial(item.id)
-                                        showDeleteDialog = false
-                                    }
-                                ) {
-                                    Text("Hapus")
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showDeleteDialog = false }) {
-                                    Text("Batal")
-                                }
-                            }
-                        )
+                        Icon(Icons.Default.Delete, null, tint = Color.Red)
                     }
                 }
             }
         }
     }
+
+    // DIALOG KONFIRMASI HAPUS
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Hapus Materi?") },
+            text = { Text("Apakah Anda yakin ingin menghapus materi '${item.subject}' ini?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteMaterial(item.id)
+                        showDeleteDialog = false
+                    }
+                ) { Text("Hapus", color = Color.Red) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") }
+            }
+        )
+    }
+}
