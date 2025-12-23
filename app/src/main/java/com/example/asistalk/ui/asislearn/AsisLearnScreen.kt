@@ -44,13 +44,15 @@ fun AsisLearnScreen(
     // Set session & fetch materi
     LaunchedEffect(Unit) {
         val id = userPrefsRepo.userIdFlow.first()
-        val token = userPrefsRepo.getToken()
+        // Token tidak perlu diambil lagi di sini karena sudah dihandle AuthInterceptor
         val fullName = userPrefsRepo.fullnameFlow.first()
-        viewModel.setSession(id, token, fullName)
+
+        // Memanggil setSession tanpa parameter token
+        viewModel.setSession(id, fullName)
         viewModel.fetchAllMaterials()
     }
 
-    // Filter reaktif tanpa loop
+    // Filter reaktif
     LaunchedEffect(selectedTab, searchQuery) {
         viewModel.selectedTabIndex = selectedTab
         viewModel.searchQuery = searchQuery
@@ -170,7 +172,6 @@ fun MaterialCard(
     val isLoading by viewModel.isLoading.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     val isMyMaterial = item.user_id == viewModel.currentUserId
-    val token = viewModel.currentUserToken
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -214,7 +215,6 @@ fun MaterialCard(
 
             OutlinedButton(
                 onClick = {
-                    // Aksi navigasi ke route detailMaterial dengan membawa ID materi
                     navController.navigate("detailMaterial/${item.id}")
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -243,7 +243,7 @@ fun MaterialCard(
                     Text(item.author_name, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 }
 
-                IconButton(onClick = { /* Download */ }) {
+                IconButton(onClick = { /* Implementasi Download Besok */ }) {
                     Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
 
@@ -270,7 +270,8 @@ fun MaterialCard(
                             confirmButton = {
                                 TextButton(
                                     onClick = {
-                                        viewModel.deleteMaterial(item.id, token)
+                                        // Panggilan delete tanpa parameter token manual
+                                        viewModel.deleteMaterial(item.id)
                                         showDeleteDialog = false
                                     }
                                 ) {

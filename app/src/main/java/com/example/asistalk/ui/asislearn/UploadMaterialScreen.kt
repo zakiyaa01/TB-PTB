@@ -26,8 +26,8 @@ import androidx.navigation.NavHostController
 @Composable
 fun UploadMaterialScreen(
     navController: NavHostController,
-    viewModel: AsisLearnViewModel,
-    token: String
+    viewModel: AsisLearnViewModel
+    // Parameter token sudah dihapus karena ditangani AuthInterceptor
 ) {
     val context = LocalContext.current
 
@@ -39,29 +39,26 @@ fun UploadMaterialScreen(
     val selectedFileUri by viewModel.selectedFileUri.collectAsState()
     val currentFileName by viewModel.currentFileName.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-
-    // Gunakan satu event saja jika di ViewModel sudah disatukan ke uploadEvent
     val uploadEvent by viewModel.uploadEvent.collectAsState()
 
     val scrollState = rememberScrollState()
     var expanded by remember { mutableStateOf(false) }
     val fileTypes = listOf("PDF", "Video", "Image", "Dokumen")
 
-    // PERBAIKAN: Jangan reset di sini jika sedang mode EDIT.
-    // Reset sebaiknya dilakukan di AsisLearnScreen saat menekan tombol "+"
+    // Inisialisasi state: reset hanya jika bukan mode edit
     LaunchedEffect(Unit) {
         if (viewModel.editingMaterialId == null) {
             viewModel.resetInputStates()
         }
     }
 
-    // Hasil Upload / Edit
+    // Menangani hasil akhir (Success/Fail)
     LaunchedEffect(uploadEvent) {
         uploadEvent?.let { success ->
-            val message = if (viewModel.editingMaterialId == null) "Upload" else "Update"
+            val actionName = if (viewModel.editingMaterialId == null) "Upload" else "Update"
             Toast.makeText(
                 context,
-                if (success) "$message berhasil" else "$message gagal",
+                if (success) "$actionName berhasil" else "$actionName gagal",
                 Toast.LENGTH_SHORT
             ).show()
 
@@ -72,7 +69,7 @@ fun UploadMaterialScreen(
         }
     }
 
-    // File Picker
+    // File Picker Launcher
     val filePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -194,15 +191,17 @@ fun UploadMaterialScreen(
             } else {
                 Button(
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    // Validasi: Subject & Topic wajib. File wajib untuk upload baru.
-                    // Untuk Edit, file tidak wajib (boleh tetap pakai file lama).
+                    // Validasi: Subject & Topic wajib.
+                    // File wajib hanya untuk upload baru (editingMaterialId == null).
                     enabled = subject.isNotBlank() && topic.isNotBlank() &&
                             (viewModel.editingMaterialId != null || selectedFileUri != null),
                     onClick = {
                         if (viewModel.editingMaterialId == null) {
-                            viewModel.uploadMaterial(context, token)
+                            // Panggil tanpa parameter token (handled by Interceptor)
+                            viewModel.uploadMaterial(context)
                         } else {
-                            viewModel.updateMaterial(context, token)
+                            // Panggil tanpa parameter token (handled by Interceptor)
+                            viewModel.updateMaterial(context)
                         }
                     },
                     shape = RoundedCornerShape(12.dp)
@@ -216,8 +215,9 @@ fun UploadMaterialScreen(
         }
     }
 }
+
 /* =======================
-   UI HELPERS
+   UI HELPERS (Penting agar tidak error)
    ======================= */
 
 @Composable

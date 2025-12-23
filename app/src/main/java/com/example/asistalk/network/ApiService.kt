@@ -36,7 +36,7 @@ data class UserProfile(
     val profile_image: String
 )
 
-data class UploadResponse(
+data class CommonResponse(
     val success: Boolean,
     val message: String
 )
@@ -89,29 +89,26 @@ interface ApiService {
     @Multipart
     @POST("api/materials")
     suspend fun uploadMaterial(
-        @Header("Authorization") token: String,
         @Part("subject") subject: RequestBody,
         @Part("topic") topic: RequestBody,
         @Part("description") description: RequestBody?,
         @Part("file_type") fileType: RequestBody,
         @Part file: MultipartBody.Part
-    ): UploadResponse
+    ): CommonResponse
 
     @Multipart
     @PUT("api/materials/{id}")
     suspend fun updateMaterial(
-        @Header("Authorization") token: String,
         @Path("id") id: Int,
         @Part("subject") subject: RequestBody,
         @Part("topic") topic: RequestBody,
         @Part("description") description: RequestBody?,
         @Part("file_type") fileType: RequestBody, // Tambahkan ini agar sinkron
         @Part file: MultipartBody.Part? = null    // File bersifat opsional saat edit
-    ): UploadResponse
+    ): CommonResponse
 
     @DELETE("api/materials/{id}")
     suspend fun deleteMaterial(
-        @Header("Authorization") token: String,
         @Path("id") id: Int
-    ): UploadResponse
+    ): CommonResponse
 }

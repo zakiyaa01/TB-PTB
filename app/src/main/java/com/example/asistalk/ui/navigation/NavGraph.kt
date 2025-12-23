@@ -16,7 +16,6 @@ import com.example.asistalk.ui.auth.RegisterScreen
 import com.example.asistalk.ui.home.HomeScreen
 import com.example.asistalk.ui.profile.*
 import androidx.navigation.NavType
-import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 
 @Composable
@@ -72,18 +71,18 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
     ) {
         // HOME
         composable("home") { backStackEntry ->
-            val asisLearnViewModel: AsisLearnViewModel = viewModel(backStackEntry)
+            // Gunakan viewModel yang sama agar data sinkron
+            val asisLearnViewModel: AsisLearnViewModel = viewModel()
             HomeScreen(navController = navController, viewModel = asisLearnViewModel)
         }
 
         // ============================================================
-        // ASISLEARN GRAPH (Upload & Edit Digabung)
+        // ASISLEARN GRAPH
         // ============================================================
         navigation(
             startDestination = "asislearn_main",
             route = "asislearn"
         ) {
-            // Screen Utama List Materi
             composable("asislearn_main") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("asislearn")
@@ -92,48 +91,41 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                 AsisLearnScreen(navController = navController, viewModel = vm)
             }
 
-            // Screen Form (Digunakan untuk Upload DAN Edit)
             composable("uploadMaterial") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("asislearn")
                 }
                 val vm: AsisLearnViewModel = viewModel(parentEntry)
 
-                // Token sementara, pastikan diambil dari session login asli
-                val token =
-                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJzdWNpIiwiaWF0IjoxNzY2MzgwNjY1LCJleHAiOjE3NjY5ODU0NjV9.DeqL3KcxXLdZWJJUNXMKzykND85yyijwtbpWyWew8ls"
-
+                // ✅ PERBAIKAN: Parameter token dihapus karena sudah dihandle AuthInterceptor
                 UploadMaterialScreen(
                     navController = navController,
-                    viewModel = vm,
-                    token = token
+                    viewModel = vm
                 )
             }
+
             composable(
                 route = "detailMaterial/{materialId}",
                 arguments = listOf(
                     navArgument("materialId") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
-                // 1. Ambil ID dari argumen
                 val id = backStackEntry.arguments?.getInt("materialId") ?: 0
-
-                // 2. Ambil Parent Entry agar ViewModel-nya sama (Shared) dengan List & Upload
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("asislearn")
                 }
                 val vm: AsisLearnViewModel = viewModel(parentEntry)
 
-                // 3. Masukkan variabel 'vm' ke parameter viewModel
                 MaterialDetailScreen(
                     materialId = id,
                     navController = navController,
-                    viewModel = vm // Gunakan variabel 'vm', bukan kata kunci 'viewModel'
+                    viewModel = vm
                 )
             }
         }
+
         // ============================================================
-        // ASISHUB & PROFILE GRAPH (Tetap Sama)
+        // ASISHUB & PROFILE GRAPH
         // ============================================================
         navigation(startDestination = "asishub_main", route = "asishub") {
             composable("asishub_main") { backStackEntry ->

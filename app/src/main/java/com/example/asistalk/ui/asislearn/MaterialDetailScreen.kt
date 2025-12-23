@@ -2,6 +2,7 @@ package com.example.asistalk.ui.asislearn
 
 import android.content.Intent
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -24,8 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.asistalk.ui.theme.Primary
 import com.example.asistalk.ui.theme.Secondary
-import android.webkit.MimeTypeMap
-import androidx.core.content.ContextCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,52 +34,50 @@ fun MaterialDetailScreen(
     viewModel: AsisLearnViewModel
 ) {
     val context = LocalContext.current
+    // Mengambil state selectedMaterial dari ViewModel secara reaktif
     val material by viewModel.selectedMaterial.collectAsState()
 
+    // Ambil detail materi dari list lokal di ViewModel saat screen dibuka
     LaunchedEffect(materialId) {
         viewModel.getDetailFromList(materialId)
     }
 
-    // Fungsi openFile yang simpel tapi ampuh untuk emulator
-    // Fungsi openFile yang lebih tangguh untuk Emulator
+    /**
+     * Fungsi untuk membuka file di Emulator/HP.
+     * Sudah menggunakan replace localhost ke 10.0.2.2 agar bisa akses backend.
+     */
     fun openFile(url: String) {
         try {
-            // 1. Sesuaikan URL untuk Emulator
             val adjustedUrl = url.replace("localhost", "10.0.2.2")
             val uri = Uri.parse(adjustedUrl)
 
-            // 2. Ambil ekstensi file untuk menentukan MimeType
+            // Deteksi MimeType otomatis
             val extension = MimeTypeMap.getFileExtensionFromUrl(adjustedUrl)
             val type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
 
-            // 3. Buat Intent
             val intent = Intent(Intent.ACTION_VIEW)
-
             if (type != null) {
-                // Jika tipe file dikenali (pdf, mp4, dll), set data dan tipenya
                 intent.setDataAndType(uri, type)
             } else {
-                // Jika tidak dikenali, buka sebagai link umum
                 intent.data = uri
             }
 
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
-            // 4. Paksa gunakan Chooser agar user bisa memilih MuPDF atau Chrome
-            val chooser = Intent.createChooser(intent, "Buka dengan...")
+            // Menggunakan Chooser agar user bisa pilih MuPDF atau Browser
+            val chooser = Intent.createChooser(intent, "Buka materi dengan...")
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
             context.startActivity(chooser)
 
         } catch (e: Exception) {
-            // Fallback: Jika gagal total, paksa buka Browser Chrome tanpa MimeType
+            // Fallback ke browser jika aplikasi spesifik tidak ada
             try {
                 val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url.replace("localhost", "10.0.2.2")))
                 browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(browserIntent)
             } catch (ex: Exception) {
-                Toast.makeText(context, "Tidak ada aplikasi (MuPDF/Browser) yang merespon", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Gagal membuka materi", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -105,7 +102,7 @@ fun MaterialDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .background(Color(0xFFF8FAFC))
             ) {
-                // --- HEADER VISUAL ---
+                // --- HEADER DENGAN GRADIENT ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -146,7 +143,7 @@ fun MaterialDetailScreen(
                     }
                 }
 
-                // --- INFO CARD ---
+                // --- KARTU INFORMASI ---
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -175,6 +172,7 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(24.dp))
 
+                        // INFO PENGUNGGAH
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -192,7 +190,7 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(32.dp))
 
-                        // Tombol Lihat
+                        // Tombol Lihat (Tanpa Token manual karena Interceptor sudah menangani auth)
                         Button(
                             onClick = { openFile(item.file_path) },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -222,6 +220,7 @@ fun MaterialDetailScreen(
                 Spacer(Modifier.height(20.dp))
             }
         } ?: run {
+            // Loading state jika data materi belum tersedia
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Primary)
             }

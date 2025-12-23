@@ -1,5 +1,6 @@
 package com.example.asistalk.ui.asislearn
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -7,7 +8,8 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.asistalk.network.MaterialItem
 import com.example.asistalk.network.RetrofitClient
@@ -23,15 +25,15 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.FileOutputStream
-import androidx.compose.runtime.mutableIntStateOf
 
-class AsisLearnViewModel : ViewModel() {
+class AsisLearnViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val apiService = RetrofitClient.instance
+    // Inisialisasi Repository
+    private val apiService = RetrofitClient.getInstance(application.applicationContext)
+    private val repository = AsisLearnRepository(apiService)
 
     // --- DATA STATE ---
     private val _allMaterials = MutableStateFlow<List<MaterialItem>>(emptyList())
-
     private val _materials = MutableStateFlow<List<MaterialItem>>(emptyList())
     val materials = _materials.asStateFlow()
 
@@ -65,27 +67,22 @@ class AsisLearnViewModel : ViewModel() {
 
     // --- SESSION & FILTER STATE ---
     var currentUserId by mutableStateOf(-1)
-    var currentUserToken by mutableStateOf("")
     var currentUserFullName by mutableStateOf("")
-
     var selectedTabIndex by mutableIntStateOf(0)
     var searchQuery by mutableStateOf("")
     var editingMaterialId: Int? = null
 
-    // --- SESSION MANAGEMENT ---
-    fun setSession(id: Int, token: String, fullName: String) {
+    fun setSession(id: Int, fullName: String) {
         currentUserId = id
-        currentUserToken = token
         currentUserFullName = fullName
-        Log.d("AsisLearnVM", "Session Updated - User: $fullName (ID: $id)")
     }
 
-    // --- CORE LOGIC: FETCH & FILTER ---
+    // --- CORE LOGIC MENGGUNAKAN REPOSITORY ---
     fun fetchAllMaterials() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = apiService.getAllMaterials()
+                val response = repository.getAllMaterials() // Panggil Repository
                 if (response.success) {
                     _allMaterials.value = response.data
                     filterMaterials()
@@ -100,13 +97,9 @@ class AsisLearnViewModel : ViewModel() {
 
     fun filterMaterials() {
         var filtered = _allMaterials.value
-
-        // Filter by Tab (0: All, 1: My Material)
         if (selectedTabIndex == 1) {
             filtered = filtered.filter { it.user_id == currentUserId }
         }
-
-        // Filter by Search Query
         if (searchQuery.isNotEmpty()) {
             filtered = filtered.filter {
                 it.subject.contains(searchQuery, ignoreCase = true) ||
@@ -140,16 +133,14 @@ class AsisLearnViewModel : ViewModel() {
         _currentFileName.value = item.file_path.substringAfterLast("/")
     }
 
-    // --- API ACTIONS: UPLOAD, UPDATE, DELETE ---
-    fun uploadMaterial(context: Context, token: String) {
+    fun uploadMaterial(context: Context) {
         val uri = _selectedFileUri.value ?: return
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val file = withContext(Dispatchers.IO) { uriToFile(uri, context) }
                 file?.let {
-                    val response = apiService.uploadMaterial(
-                        "Bearer $token",
+                    val response = repository.uploadMaterial( // Panggil Repository
                         createPart(_subject.value),
                         createPart(_topic.value),
                         createPart(_description.value),
@@ -160,7 +151,6 @@ class AsisLearnViewModel : ViewModel() {
                     if (response.success) fetchAllMaterials()
                 }
             } catch (e: Exception) {
-                Log.e("UploadError", e.message.toString())
                 _uploadEvent.value = false
             } finally {
                 _isLoading.value = false
@@ -168,7 +158,7 @@ class AsisLearnViewModel : ViewModel() {
         }
     }
 
-    fun updateMaterial(context: Context, token: String) {
+    fun updateMaterial(context: Context) {
         val id = editingMaterialId ?: return
         viewModelScope.launch {
             _isLoading.value = true
@@ -179,8 +169,8 @@ class AsisLearnViewModel : ViewModel() {
                     file?.let { filePart = createMultipart(it) }
                 }
 
-                val response = apiService.updateMaterial(
-                    "Bearer $token", id,
+                val response = repository.updateMaterial( // Panggil Repository
+                    id,
                     createPart(_subject.value),
                     createPart(_topic.value),
                     createPart(_description.value),
@@ -191,18 +181,17 @@ class AsisLearnViewModel : ViewModel() {
                 if (response.success) fetchAllMaterials()
             } catch (e: Exception) {
                 _uploadEvent.value = false
-                Log.e("UpdateError", e.message.toString())
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    fun deleteMaterial(id: Int, token: String) {
+    fun deleteMaterial(id: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = apiService.deleteMaterial("Bearer $token", id)
+                val response = repository.deleteMaterial(id) // Panggil Repository
                 if (response.success) {
                     _allMaterials.value = _allMaterials.value.filter { it.id != id }
                     filterMaterials()
@@ -217,7 +206,6 @@ class AsisLearnViewModel : ViewModel() {
 
     // --- HELPERS ---
     fun consumeUploadEvent() { _uploadEvent.value = null }
-
     fun resetInputStates() {
         _subject.value = ""
         _topic.value = ""
@@ -229,7 +217,6 @@ class AsisLearnViewModel : ViewModel() {
     }
 
     private fun createPart(v: String): RequestBody = v.toRequestBody("text/plain".toMediaTypeOrNull())
-
     private fun createMultipart(f: File): MultipartBody.Part {
         val requestFile = f.asRequestBody("application/octet-stream".toMediaTypeOrNull())
         return MultipartBody.Part.createFormData("file", f.name, requestFile)
@@ -237,14 +224,12 @@ class AsisLearnViewModel : ViewModel() {
 
     private fun getFileName(uri: Uri, context: Context): String {
         var name = ""
-        try {
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val index = cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
-                    name = cursor.getString(index)
-                }
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val index = cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)
+                name = cursor.getString(index)
             }
-        } catch (e: Exception) { name = "" }
+        }
         return name.ifEmpty { uri.path?.substringAfterLast('/') ?: "file" }
     }
 

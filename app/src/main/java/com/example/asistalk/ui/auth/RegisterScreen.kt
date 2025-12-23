@@ -204,7 +204,9 @@ fun RegisterScreen(
                                 imageRequest
                             )
 
-                            val response = RetrofitClient.instance.registerUser(
+                            val api = RetrofitClient.getInstance(context)
+
+                            val response = api.registerUser(
                                 fullName.toRequestBody("text/plain".toMediaType()),
                                 username.toRequestBody("text/plain".toMediaType()),
                                 email.toRequestBody("text/plain".toMediaType()),

@@ -55,15 +55,16 @@ fun HomeScreen(
     // Inisialisasi Data
     LaunchedEffect(Unit) {
         val id = userPrefsRepo.userIdFlow.first()
-        val token = userPrefsRepo.getToken()
+        // Token tidak perlu dikirim manual lagi karena sudah ada AuthInterceptor
         val nameFromPrefs = userPrefsRepo.fullnameFlow.first()
 
-        viewModel.setSession(id, token, nameFromPrefs)
+        // Perbaikan: Hapus parameter token dari setSession
+        viewModel.setSession(id, nameFromPrefs)
         viewModel.fetchAllMaterials()
     }
 
     Scaffold(
-        containerColor = Color(0xFFF8FAFC) // Background Slate yang sangat lembut
+        containerColor = Color(0xFFF8FAFC)
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -96,9 +97,11 @@ fun HomeScreen(
             if (isLoading) {
                 item { LoadingIndicator() }
             } else {
+                // Menampilkan 3 materi terbaru saja di Home
                 items(materials.take(3)) { material ->
                     NewMaterialCard(material) {
-                        navController.navigate("asislearn")
+                        // Navigasi ke detail materi dengan ID
+                        navController.navigate("detailMaterial/${material.id}")
                     }
                 }
             }
@@ -124,7 +127,7 @@ fun HomeScreen(
     }
 }
 
-// --- Komponen UI Pendukung ---
+// --- Komponen UI Tetap Sama ---
 
 @Composable
 fun HeaderSection() {
