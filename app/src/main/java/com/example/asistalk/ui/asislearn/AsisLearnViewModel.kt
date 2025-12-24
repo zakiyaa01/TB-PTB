@@ -118,7 +118,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
     fun downloadMaterial(context: Context, url: String, subject: String) {
         try {
             val adjustedUrl = url.replace("localhost", "10.0.2.2")
-            // Nama file harus konsisten dengan checkDownloadedMaterials
             val fileName = "${subject.replace(" ", "_")}.pdf"
 
             val request = DownloadManager.Request(Uri.parse(adjustedUrl))
@@ -153,7 +152,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
             _downloadedIds.value = downloadedSet
-            // Refresh tampilan setelah cek selesai
             withContext(Dispatchers.Main) {
                 filterMaterials()
             }
@@ -184,6 +182,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _currentFileName.value = item.file_path.substringAfterLast("/")
     }
 
+    // --- UPLOAD & UPDATE MATERIAL (Perbaikan file path) ---
     fun uploadMaterial(context: Context) {
         val uri = _selectedFileUri.value ?: return
         viewModelScope.launch {
@@ -191,12 +190,13 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 val file = withContext(Dispatchers.IO) { uriToFile(uri, context) }
                 file?.let {
+                    val originalName = _currentFileName.value.ifEmpty { it.name }
                     val response = repository.uploadMaterial(
                         createPart(_subject.value),
                         createPart(_topic.value),
                         createPart(_description.value),
                         createPart(_fileType.value),
-                        createMultipart(it)
+                        createMultipart(it, originalName)
                     )
                     _uploadEvent.value = response.success
                     if (response.success) fetchAllMaterials()
@@ -217,7 +217,10 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                 var filePart: MultipartBody.Part? = null
                 _selectedFileUri.value?.let { uri ->
                     val file = withContext(Dispatchers.IO) { uriToFile(uri, context) }
-                    file?.let { filePart = createMultipart(it) }
+                    file?.let {
+                        val originalName = _currentFileName.value.ifEmpty { it.name }
+                        filePart = createMultipart(it, originalName)
+                    }
                 }
 
                 val response = repository.updateMaterial(
@@ -270,9 +273,9 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
     // --- HELPERS ---
     private fun createPart(v: String): RequestBody = v.toRequestBody("text/plain".toMediaTypeOrNull())
 
-    private fun createMultipart(f: File): MultipartBody.Part {
+    private fun createMultipart(f: File, originalFileName: String): MultipartBody.Part {
         val requestFile = f.asRequestBody("application/octet-stream".toMediaTypeOrNull())
-        return MultipartBody.Part.createFormData("file", f.name, requestFile)
+        return MultipartBody.Part.createFormData("file", originalFileName, requestFile)
     }
 
     private fun getFileName(uri: Uri, context: Context): String {

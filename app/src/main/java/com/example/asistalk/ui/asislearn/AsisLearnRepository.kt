@@ -1,25 +1,22 @@
 package com.example.asistalk.ui.asislearn
 
 import com.example.asistalk.network.ApiService
-import com.example.asistalk.network.CommonResponse // Pastikan import ini benar
-import com.example.asistalk.network.MaterialResponse // Pastikan import ini benar
+import com.example.asistalk.network.CommonResponse
+import com.example.asistalk.network.MaterialResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 
 class AsisLearnRepository(private val apiService: ApiService) {
 
-    suspend fun getAllMaterials(): MaterialResponse {
-        return apiService.getAllMaterials()
-    }
+    suspend fun getAllMaterials(): MaterialResponse = apiService.getAllMaterials()
 
     suspend fun uploadMaterial(
         subject: RequestBody,
         topic: RequestBody,
-        description: RequestBody,
+        description: RequestBody?,
         fileType: RequestBody,
         file: MultipartBody.Part
     ): CommonResponse {
-        // Memanggil apiService yang sudah terintegrasi dengan AuthInterceptor
         return apiService.uploadMaterial(subject, topic, description, fileType, file)
     }
 
@@ -27,11 +24,10 @@ class AsisLearnRepository(private val apiService: ApiService) {
         id: Int,
         subject: RequestBody,
         topic: RequestBody,
-        description: RequestBody,
+        description: RequestBody?,
         fileType: RequestBody,
         file: MultipartBody.Part?
     ): CommonResponse {
-        // Pastikan urutan parameter sama dengan ApiService
         return apiService.updateMaterial(id, subject, topic, description, fileType, file)
     }
 

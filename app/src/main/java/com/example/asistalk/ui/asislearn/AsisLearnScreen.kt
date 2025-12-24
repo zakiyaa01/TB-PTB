@@ -100,7 +100,7 @@ fun AsisLearnScreen(
                 ) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Upload", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("Upload Material", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
 
@@ -200,6 +200,7 @@ fun MaterialCard(
                         imageVector = when (item.file_type.uppercase()) {
                             "PDF" -> Icons.Default.PictureAsPdf
                             "VIDEO" -> Icons.Default.PlayCircle
+                            "IMAGE" -> Icons.Default.Image
                             else -> Icons.Default.Description
                         },
                         contentDescription = null,

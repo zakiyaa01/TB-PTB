@@ -87,7 +87,7 @@ interface ApiService {
     suspend fun getAllMaterials(): MaterialResponse
 
     @Multipart
-    @POST("api/materials")
+    @POST("api/materials/")
     suspend fun uploadMaterial(
         @Part("subject") subject: RequestBody,
         @Part("topic") topic: RequestBody,
@@ -103,8 +103,8 @@ interface ApiService {
         @Part("subject") subject: RequestBody,
         @Part("topic") topic: RequestBody,
         @Part("description") description: RequestBody?,
-        @Part("file_type") fileType: RequestBody, // Tambahkan ini agar sinkron
-        @Part file: MultipartBody.Part? = null    // File bersifat opsional saat edit
+        @Part("file_type") fileType: RequestBody, // opsional, tergantung backend
+        @Part file: MultipartBody.Part? = null
     ): CommonResponse
 
     @DELETE("api/materials/{id}")

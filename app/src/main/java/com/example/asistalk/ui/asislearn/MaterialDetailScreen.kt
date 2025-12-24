@@ -2,7 +2,6 @@ package com.example.asistalk.ui.asislearn
 
 import android.content.Intent
 import android.net.Uri
-import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -43,38 +42,53 @@ fun MaterialDetailScreen(
     }
 
     /**
-     * Fungsi untuk membuka/preview file langsung di aplikasi eksternal (PDF Viewer/Browser)
+     * Fungsi Terpadu untuk Preview Berbagai Jenis File
      */
-    fun openFile(url: String) {
+    fun openFile(url: String, fileType: String) {
         try {
-            val adjustedUrl = url.replace("localhost", "10.0.2.2")
+            // 1. Pastikan URL menggunakan IP Emulator jika localhost
+            var adjustedUrl = url.replace("localhost", "10.0.2.2")
+
+            // 2. Jika URL belum diawali http, tambahkan
+            if (!adjustedUrl.startsWith("http")) {
+                adjustedUrl = "http://10.0.2.2:3000/$adjustedUrl"
+            }
+
             val uri = Uri.parse(adjustedUrl)
 
-            val extension = MimeTypeMap.getFileExtensionFromUrl(adjustedUrl)
-            val type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
-
-            val intent = Intent(Intent.ACTION_VIEW)
-            if (type != null) {
-                intent.setDataAndType(uri, type)
-            } else {
-                intent.data = uri
+            // 3. Tentukan Intent berdasarkan tipe file
+            val intent = when (fileType.uppercase()) {
+                "PDF", "DOC", "DOCX", "DOKUMEN" -> {
+                    // Gunakan Google Docs Viewer sebagai wrapper agar bisa preview visual
+                    val previewUrl = "https://docs.google.com/viewer?url=$adjustedUrl"
+                    Intent(Intent.ACTION_VIEW, Uri.parse(previewUrl))
+                }
+                "VIDEO" -> {
+                    Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "video/*")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                }
+                "IMAGE" -> {
+                    Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "image/*")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                }
+                else -> {
+                    Intent(Intent.ACTION_VIEW, uri)
+                }
             }
 
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
+            // 4. Gunakan Chooser agar user bisa memilih aplikasi yang tersedia
             val chooser = Intent.createChooser(intent, "Buka materi dengan...")
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(chooser)
 
         } catch (e: Exception) {
-            try {
-                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url.replace("localhost", "10.0.2.2")))
-                browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(browserIntent)
-            } catch (ex: Exception) {
-                Toast.makeText(context, "Gagal membuka materi", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(context, "Gagal membuka file: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -102,7 +116,7 @@ fun MaterialDetailScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(240.dp)
+                        .height(260.dp)
                         .background(
                             brush = Brush.verticalGradient(colors = listOf(Primary, Secondary)),
                             shape = RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp)
@@ -116,11 +130,15 @@ fun MaterialDetailScreen(
                             modifier = Modifier.size(110.dp)
                         ) {
                             Icon(
-                                imageVector = if (item.file_type.uppercase() == "PDF")
-                                    Icons.Default.PictureAsPdf else Icons.Default.PlayCircle,
+                                imageVector = when(item.file_type.uppercase()) {
+                                    "PDF" -> Icons.Default.PictureAsPdf
+                                    "VIDEO" -> Icons.Default.PlayCircle
+                                    "IMAGE" -> Icons.Default.Image
+                                    else -> Icons.Default.Description
+                                },
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.padding(24.dp).size(48.dp)
+                                modifier = Modifier.padding(24.dp).size(54.dp)
                             )
                         }
                         Spacer(Modifier.height(12.dp))
@@ -188,12 +206,12 @@ fun MaterialDetailScreen(
 
                         // TOMBOL LIHAT (Preview)
                         Button(
-                            onClick = { openFile(item.file_path) },
+                            onClick = { openFile(item.file_path, item.file_type) },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Primary)
                         ) {
-                            Icon(Icons.Default.Visibility, null)
+                            Icon(Icons.Default.Visibility, null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
                             Text("Lihat Materi Lengkap", fontWeight = FontWeight.Bold)
                         }
@@ -203,7 +221,6 @@ fun MaterialDetailScreen(
                         // TOMBOL DOWNLOAD
                         OutlinedButton(
                             onClick = {
-                                // ✅ PERBAIKAN: Menyertakan parameter 'context' sesuai fungsi di ViewModel terbaru
                                 viewModel.downloadMaterial(
                                     context = context,
                                     url = item.file_path,
@@ -214,7 +231,7 @@ fun MaterialDetailScreen(
                             shape = RoundedCornerShape(16.dp),
                             border = androidx.compose.foundation.BorderStroke(1.5.dp, Primary)
                         ) {
-                            Icon(Icons.Default.Download, null, tint = Primary)
+                            Icon(Icons.Default.Download, null, tint = Primary, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
                             Text("Download File", fontWeight = FontWeight.Bold, color = Primary)
                         }
