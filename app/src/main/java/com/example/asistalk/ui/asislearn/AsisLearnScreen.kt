@@ -163,7 +163,7 @@ fun AsisLearnScreen(
                     ) {
                         Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Upload", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Upload Materi", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
