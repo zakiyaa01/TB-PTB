@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import com.example.asistalk.network.MaterialItem
-import com.example.asistalk.utils.NotificationHelper // Import Helper Notifikasi
+import com.example.asistalk.utils.NotificationHelper
 import com.example.asistalk.utils.UserPreferencesRepository
 import kotlinx.coroutines.flow.first
 
@@ -44,14 +44,14 @@ fun AsisLearnScreen(
     val materials by viewModel.materials.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    // --- LOGIKA NOTIFIKASI OTOMATIS (Materi Baru) ---
+    // --- LOGIKA NOTIFIKASI
     var prevSize by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(materials) {
-        // Deteksi jika materi bertambah (ada yang baru upload)
+        //materi baru
         if (materials.size > prevSize && prevSize != 0) {
             val latest = materials.firstOrNull()
-            // Jika pengunggah bukan user saat ini, catat sebagai notifikasi
+            // Jika pengunggah bukan user
             if (latest != null && latest.user_id != viewModel.currentUserId) {
                 NotificationHelper.addLog(
                     context,
@@ -63,7 +63,6 @@ fun AsisLearnScreen(
         if (materials.isNotEmpty()) prevSize = materials.size
     }
 
-    // Ambil Session & Fetch Materi Pertama Kali
     LaunchedEffect(Unit) {
         val id = userPrefsRepo.userIdFlow.first()
         val fullName = userPrefsRepo.fullnameFlow.first()
@@ -71,7 +70,6 @@ fun AsisLearnScreen(
         viewModel.fetchAllMaterials()
     }
 
-    // Filter reaktif & Cek Download
     LaunchedEffect(selectedTab, searchQuery) {
         viewModel.selectedTabIndex = selectedTab
         viewModel.searchQuery = searchQuery
@@ -92,7 +90,7 @@ fun AsisLearnScreen(
             contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 24.dp)
         ) {
 
-            // --- 1. HEADER (Logo & Notif Khusus) ---
+            // 1. HEADER
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -114,7 +112,7 @@ fun AsisLearnScreen(
                     )
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // ICON LONCENG (Navigasi ke Notif Khusus AsisLearn)
+                    // notif
                     Icon(
                         painter = painterResource(R.drawable.ic_notification),
                         contentDescription = "Notif",
@@ -122,7 +120,6 @@ fun AsisLearnScreen(
                         modifier = Modifier
                             .size(28.dp)
                             .clickable {
-                                // Rute diarahkan ke notif internal AsisLearn
                                 navController.navigate("asislearn_notif")
                             }
                     )

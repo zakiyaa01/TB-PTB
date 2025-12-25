@@ -43,7 +43,6 @@ fun EditMaterialScreen(
     var expanded by remember { mutableStateOf(false) }
     val fileTypes = listOf("PDF", "Video", "Image", "Dokumen")
 
-    // Menangani hasil Update
     LaunchedEffect(uploadEvent) {
         uploadEvent?.let { success ->
             Toast.makeText(
@@ -172,10 +171,9 @@ fun EditMaterialScreen(
             } else {
                 Button(
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                    // Validasi: Subject & Topic tidak boleh kosong
+                    // Validasi
                     enabled = subject.isNotBlank() && topic.isNotBlank(),
                     onClick = {
-                        // Memanggil updateMaterial tanpa token (otomatis oleh Interceptor)
                         viewModel.updateMaterial(context)
                     },
                     shape = RoundedCornerShape(16.dp)

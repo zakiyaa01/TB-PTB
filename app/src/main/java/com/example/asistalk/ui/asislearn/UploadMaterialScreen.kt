@@ -27,11 +27,10 @@ import androidx.navigation.NavHostController
 fun UploadMaterialScreen(
     navController: NavHostController,
     viewModel: AsisLearnViewModel
-    // Parameter token sudah dihapus karena ditangani AuthInterceptor
 ) {
     val context = LocalContext.current
 
-    // ===== STATE DARI VIEWMODEL =====
+    // ===== STATE VIEWMODEL =====
     val subject by viewModel.subject.collectAsState()
     val topic by viewModel.topic.collectAsState()
     val description by viewModel.description.collectAsState()
@@ -45,14 +44,12 @@ fun UploadMaterialScreen(
     var expanded by remember { mutableStateOf(false) }
     val fileTypes = listOf("PDF", "Video", "Image", "Dokumen")
 
-    // Inisialisasi state: reset hanya jika bukan mode edit
     LaunchedEffect(Unit) {
         if (viewModel.editingMaterialId == null) {
             viewModel.resetInputStates()
         }
     }
 
-    // Menangani hasil akhir (Success/Fail)
     LaunchedEffect(uploadEvent) {
         uploadEvent?.let { success ->
             val actionName = if (viewModel.editingMaterialId == null) "Upload" else "Update"
@@ -69,7 +66,6 @@ fun UploadMaterialScreen(
         }
     }
 
-    // File Picker Launcher
     val filePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->

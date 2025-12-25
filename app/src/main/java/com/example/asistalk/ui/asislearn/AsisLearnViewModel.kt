@@ -16,7 +16,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.asistalk.network.MaterialItem
 import com.example.asistalk.network.RetrofitClient
-import com.example.asistalk.utils.NotificationHelper // Impor Helper Notifikasi
+import com.example.asistalk.utils.NotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -110,7 +110,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _materials.value = filtered
     }
 
-    // --- FUNGSI DOWNLOAD (Ditambah Log Notif) ---
+    // ---  DOWNLOAD ---
     fun downloadMaterial(context: Context, url: String, subject: String) {
         try {
             val adjustedUrl = url.replace("localhost", "10.0.2.2")
@@ -125,7 +125,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
             val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             manager.enqueue(request)
 
-            // CATAT NOTIFIKASI
+            // NOTIFIKASI
             NotificationHelper.addLog(context, "Unduhan Dimulai", "Materi '$subject' sedang diunduh.")
 
             Toast.makeText(context, "Unduhan dimulai...", Toast.LENGTH_SHORT).show()
@@ -175,7 +175,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _currentFileName.value = item.file_path.substringAfterLast("/")
     }
 
-    // --- UPLOAD (Ditambah Log Notif) ---
+    // --- UPLOAD ---
     fun uploadMaterial(context: Context) {
         val uri = _selectedFileUri.value ?: return
         viewModelScope.launch {
@@ -193,7 +193,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                     _uploadEvent.value = response.success
                     if (response.success) {
-                        // CATAT NOTIFIKASI
+                        // NOTIFIKASI
                         NotificationHelper.addLog(context, "Upload Berhasil", "Materi '${_subject.value}' telah diunggah.")
                         fetchAllMaterials()
                     }
@@ -206,7 +206,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- UPDATE (Ditambah Log Notif) ---
+    // --- UPDATE ---
     fun updateMaterial(context: Context) {
         val id = editingMaterialId ?: return
         viewModelScope.launch {
@@ -227,7 +227,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                 )
                 _uploadEvent.value = response.success
                 if (response.success) {
-                    // CATAT NOTIFIKASI
+                    // NOTIFIKASI
                     NotificationHelper.addLog(context, "Materi Diperbarui", "Materi '${_subject.value}' berhasil diubah.")
                     fetchAllMaterials()
                 }
@@ -239,14 +239,14 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- DELETE (Ditambah Log Notif) ---
+    // --- DELETE ---
     fun deleteMaterial(id: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val response = repository.deleteMaterial(id)
                 if (response.success) {
-                    // CATAT NOTIFIKASI
+                    // NOTIFIKASI
                     NotificationHelper.addLog(getApplication(), "Materi Dihapus", "Materi telah berhasil dihapus dari sistem.")
 
                     _allMaterials.value = _allMaterials.value.filter { it.id != id }

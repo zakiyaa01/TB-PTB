@@ -42,23 +42,17 @@ fun HomeScreen(
     val context = LocalContext.current
     val userPrefsRepo = remember { UserPreferencesRepository(context) }
 
-    // States dari ViewModel
     val materials by viewModel.materials.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val fullName = viewModel.currentUserFullName
-
-    // Logika Nama Tampilan (Nama Depan)
     val displayName = remember(fullName) {
         if (fullName.isNotBlank()) fullName.split(" ").first() else "Mahasiswa"
     }
 
-    // Inisialisasi Data
     LaunchedEffect(Unit) {
         val id = userPrefsRepo.userIdFlow.first()
-        // Token tidak perlu dikirim manual lagi karena sudah ada AuthInterceptor
         val nameFromPrefs = userPrefsRepo.fullnameFlow.first()
 
-        // Perbaikan: Hapus parameter token dari setSession
         viewModel.setSession(id, nameFromPrefs)
         viewModel.fetchAllMaterials()
     }
@@ -72,12 +66,12 @@ fun HomeScreen(
                 .padding(padding),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
-            // 1. HEADER GRADASI MELENGKUNG
+            // 1. HEADER
             item {
                 HeaderSection()
             }
 
-            // 2. FLOATING CARD (Welcome & Action Buttons)
+            // 2. FLOATING CARD
             item {
                 WelcomeCard(
                     displayName = displayName,
@@ -97,16 +91,14 @@ fun HomeScreen(
             if (isLoading) {
                 item { LoadingIndicator() }
             } else {
-                // Menampilkan 3 materi terbaru saja di Home
                 items(materials.take(2)) { material ->
                     NewMaterialCard(material) {
-                        // Navigasi ke detail materi dengan ID
                         navController.navigate("detailMaterial/${material.id}")
                     }
                 }
             }
 
-            // 4. SECTION DISKUSI POPULER
+            // 4. DISKUSI
             item {
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(

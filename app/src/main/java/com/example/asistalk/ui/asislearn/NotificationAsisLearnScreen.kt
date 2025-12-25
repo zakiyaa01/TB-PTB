@@ -25,7 +25,6 @@ import java.util.*
 @Composable
 fun NotificationAsisLearnScreen(navController: NavController) {
     val context = LocalContext.current
-    // Ambil log yang khusus disimpan oleh NotificationHelper
     val notifications = remember { NotificationHelper.getLogs(context) }
 
     Scaffold(

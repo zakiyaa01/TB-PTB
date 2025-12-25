@@ -36,30 +36,23 @@ fun MaterialDetailScreen(
     val context = LocalContext.current
     val material by viewModel.selectedMaterial.collectAsState()
 
-    // Ambil detail materi dari list lokal di ViewModel saat screen dibuka
+    // Ambil detail materi dari list
     LaunchedEffect(materialId) {
         viewModel.getDetailFromList(materialId)
     }
 
-    /**
-     * Fungsi Terpadu untuk Preview Berbagai Jenis File
-     */
     fun openFile(url: String, fileType: String) {
         try {
-            // 1. Pastikan URL menggunakan IP Emulator jika localhost
             var adjustedUrl = url.replace("localhost", "10.0.2.2")
 
-            // 2. Jika URL belum diawali http, tambahkan
             if (!adjustedUrl.startsWith("http")) {
                 adjustedUrl = "http://10.0.2.2:3000/$adjustedUrl"
             }
 
             val uri = Uri.parse(adjustedUrl)
 
-            // 3. Tentukan Intent berdasarkan tipe file
             val intent = when (fileType.uppercase()) {
                 "PDF", "DOC", "DOCX", "DOKUMEN" -> {
-                    // Gunakan Google Docs Viewer sebagai wrapper agar bisa preview visual
                     val previewUrl = "https://docs.google.com/viewer?url=$adjustedUrl"
                     Intent(Intent.ACTION_VIEW, Uri.parse(previewUrl))
                 }
@@ -82,7 +75,6 @@ fun MaterialDetailScreen(
 
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-            // 4. Gunakan Chooser agar user bisa memilih aplikasi yang tersedia
             val chooser = Intent.createChooser(intent, "Buka materi dengan...")
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(chooser)
@@ -112,7 +104,7 @@ fun MaterialDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .background(Color(0xFFF8FAFC))
             ) {
-                // --- HEADER GRADIENT ---
+                // --- HEADER ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -204,7 +196,7 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(32.dp))
 
-                        // TOMBOL LIHAT (Preview)
+                        // LIHAT
                         Button(
                             onClick = { openFile(item.file_path, item.file_type) },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -218,7 +210,7 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(12.dp))
 
-                        // TOMBOL DOWNLOAD
+                        // DOWNLOAD
                         OutlinedButton(
                             onClick = {
                                 viewModel.downloadMaterial(
