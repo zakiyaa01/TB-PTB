@@ -41,11 +41,11 @@ fun HomeScreen(
     val context = LocalContext.current
     val userPrefsRepo = remember { UserPreferencesRepository(context) }
 
-    // State dari AsisLearn (Materi)
+    // State dari AsisLearn
     val materials by asisLearnVm.materials.collectAsState()
     val isLearnLoading by asisLearnVm.isLoading.collectAsState()
 
-    // State dari AsisHub (Diskusi)
+    // State dari AsisHub
     val posts by asisHubVm.posts.collectAsState()
 
     val fullName = asisLearnVm.currentUserFullName
@@ -81,7 +81,7 @@ fun HomeScreen(
                 )
             }
 
-            // 2. MATERI TERBARU (Data dari Suci)
+            // 2. MATERI TERBARU
             item {
                 SectionHeader(
                     title = "Materi Terbaru",
@@ -100,7 +100,7 @@ fun HomeScreen(
                 }
             }
 
-            // 3. POSTINGAN TERBARU (Data dari Zakiya)
+            // 3. POSTINGAN TERBARU
             item {
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(
@@ -109,7 +109,6 @@ fun HomeScreen(
                 )
             }
 
-            // Cukup gunakan pengecekan isEmpty() agar tidak error mencari isHubLoading
             if (posts.isEmpty()) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
@@ -223,8 +222,8 @@ fun ActionHomeButton(text: String, icon: androidx.compose.ui.graphics.vector.Ima
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.Center, // Perbaikan Arrangement
-            verticalAlignment = Alignment.CenterVertically  // Perbaikan Alignment
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(icon, null, tint = Primary, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
@@ -237,7 +236,7 @@ fun ActionHomeButton(text: String, icon: androidx.compose.ui.graphics.vector.Ima
 fun SectionHeader(title: String, onActionClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically // Perbaikan Alignment
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Spacer(Modifier.weight(1f))
