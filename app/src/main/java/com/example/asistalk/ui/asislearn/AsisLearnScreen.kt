@@ -1,138 +1,225 @@
 package com.example.asistalk.ui.asislearn
 
+import android.content.Context
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.asistalk.R
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.ui.graphics.SolidColor
-import java.net.URLEncoder // Diperlukan untuk encoding
-import java.nio.charset.StandardCharsets // Diperlukan untuk encoding
+import com.example.asistalk.network.MaterialItem
+import com.example.asistalk.utils.NotificationHelper
+import com.example.asistalk.utils.UserPreferencesRepository
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun AsisLearnScreen(
     navController: NavHostController,
     viewModel: AsisLearnViewModel
 ) {
+    val context = LocalContext.current
+    val userPrefsRepo = remember { UserPreferencesRepository(context) }
 
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("All", "My Material", "Download")
     var searchQuery by remember { mutableStateOf("") }
 
-    // Efek Samping: Panggil fungsi filter di ViewModel setiap kali
-    // searchQuery ATAU selectedTab berubah.
-    LaunchedEffect(selectedTab, searchQuery) {
-        viewModel.filterMaterials(searchQuery, selectedTab)
+    val materials by viewModel.materials.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    // --- LOGIKA NOTIFIKASI
+    var prevSize by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(materials) {
+        //materi baru
+        if (materials.size > prevSize && prevSize != 0) {
+            val latest = materials.firstOrNull()
+            // Jika pengunggah bukan user
+            if (latest != null && latest.user_id != viewModel.currentUserId) {
+                NotificationHelper.addLog(
+                    context,
+                    "Materi Baru",
+                    "${latest.author_name} mengunggah materi baru: ${latest.subject}"
+                )
+            }
+        }
+        if (materials.isNotEmpty()) prevSize = materials.size
     }
 
-    // Ambil data materi dari ViewModel (sudah terfilter)
-    val materials by viewModel.materials.collectAsState()
+    LaunchedEffect(Unit) {
+        val id = userPrefsRepo.userIdFlow.first()
+        val fullName = userPrefsRepo.fullnameFlow.first()
+        viewModel.setSession(id, fullName)
+        viewModel.fetchAllMaterials()
+    }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Search + Upload Button
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TextField(
-                value = searchQuery,
-                onValueChange = {
-                    searchQuery = it
-                },
-                placeholder = { Text("Search...") },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                )
-            )
+    LaunchedEffect(selectedTab, searchQuery) {
+        viewModel.selectedTabIndex = selectedTab
+        viewModel.searchQuery = searchQuery
 
-            Spacer(Modifier.width(10.dp))
-
-            Button(
-                onClick = { navController.navigate("uploadMaterial") },
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text(
-                    "+ Upload Material",
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+        if (selectedTab == 2) {
+            viewModel.checkDownloadedMaterials(context)
+        } else {
+            viewModel.filterMaterials()
         }
+    }
 
-        Spacer(Modifier.height(16.dp))
-
-        // Tabs
-        TabRow(
-            selectedTabIndex = selectedTab,
-            // Latar belakang TabRow dibuat netral (abu-abu muda/surface variant)
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            // Warna konten default diatur agar kontras di atas surfaceVariant
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            indicator = {
-                TabRowDefaults.Indicator(
-                    modifier = Modifier.tabIndicatorOffset(it[selectedTab]),
-                    // Indikator tetap sekunder (Secondary)
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 24.dp)
         ) {
-            tabs.forEachIndexed { index, title ->
-                val isSelected = selectedTab == index
-                Tab(
-                    selected = isSelected,
-                    onClick = {
-                        selectedTab = index
-                    },
-                    text = {
-                        Text(
-                            title,
-                            // Teks Tab Aktif dibuat menggunakan warna Primary
-                            color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+
+            // 1. HEADER
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.logo_asistalk_hijau),
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(65.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "AsisLearn",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2098D1)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // notif
+                    Icon(
+                        painter = painterResource(R.drawable.ic_notification),
+                        contentDescription = "Notif",
+                        tint = Color.Black,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clickable {
+                                navController.navigate("asislearn_notif")
+                            }
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // --- 2. SEARCH + UPLOAD ---
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Cari subjek atau topik...", fontSize = 14.sp) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        )
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    Button(
+                        onClick = {
+                            viewModel.resetInputStates()
+                            navController.navigate("uploadMaterial")
+                        },
+                        modifier = Modifier.height(52.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Upload Materi", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+            // --- 3. TAB NAVIGATION ---
+            item {
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color.Transparent,
+                    divider = {},
+                    indicator = { tabPositions ->
+                        if (selectedTab < tabPositions.size) {
+                            TabRowDefaults.SecondaryIndicator(
+                                Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = {
+                                Text(
+                                    title,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (selectedTab == index) MaterialTheme.colorScheme.primary else Color.Gray
+                                )
+                            }
                         )
                     }
-                )
+                }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
-
-        // List materials (secara reaktif menampilkan hasil filter)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(materials) { item ->
-                MaterialCard(item, navController, viewModel)
-                Spacer(Modifier.height(12.dp))
+            // --- 4. LIST CONTENT ---
+            when {
+                isLoading -> {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(top = 40.dp), Alignment.Center) {
+                            CircularProgressIndicator(strokeWidth = 3.dp)
+                        }
+                    }
+                }
+                materials.isEmpty() -> {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(top = 40.dp), Alignment.Center) {
+                            Text("Materi tidak ditemukan", color = Color.Gray)
+                        }
+                    }
+                }
+                else -> {
+                    items(materials, key = { it.id }) { item ->
+                        MaterialCard(item, navController, viewModel, context)
+                    }
+                }
             }
         }
     }
@@ -142,161 +229,119 @@ fun AsisLearnScreen(
 fun MaterialCard(
     item: MaterialItem,
     navController: NavHostController,
-    viewModel: AsisLearnViewModel
+    viewModel: AsisLearnViewModel,
+    context: Context
 ) {
-    // --- FIX: Deklarasikan variabel encoding di sini, di awal fungsi ---
-    // Gunakan item.title sebagai ID, dan encode untuk navigasi
-    val encodedMaterialId = remember(item.title) {
-        URLEncoder.encode(item.title, StandardCharsets.UTF_8.toString())
-    }
-    // -------------------------------------------------------------------
-
-    val isMyMaterial = item.author == "Anda"
+    val isLoading by viewModel.isLoading.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val isMyMaterial = item.user_id == viewModel.currentUserId
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            // Icon
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)),
-                contentAlignment = Alignment.Center
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    painter = painterResource(id = item.icon),
-                    contentDescription = item.type,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            Spacer(Modifier.width(16.dp))
-
-            // Text
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Text(
-                    text = item.topic.ifBlank { "Tidak ada topik" }, // Gunakan Topic dari ViewModel
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(Modifier.height(4.dp))
-
-                // Baris Author dan Type
-                Row {
-                    Text(
-                        text = item.author,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = " · ${item.type}", // Tambahkan pemisah
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when (item.file_type.uppercase()) {
+                            "PDF" -> Icons.Default.PictureAsPdf
+                            "VIDEO" -> Icons.Default.PlayCircle
+                            "IMAGE" -> Icons.Default.Image
+                            else -> Icons.Default.Description
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(26.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
 
+                Spacer(Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(item.subject, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text(item.topic, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                }
             }
 
-            // ========= BUTTON AREA (Fixed & Clean) =========
-            Column(
-                modifier = Modifier.wrapContentWidth(),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = { navController.navigate("detailMaterial/${item.id}") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
             ) {
-                // Tombol LIHAT
-                OutlinedButton(
-                    onClick = {
-                        viewModel.getMaterialByTitle(item.title)
-                        // Navigasi Lihat menggunakan encodedMaterialId
-                        navController.navigate("materialDetail/$encodedMaterialId")
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = SolidColor(MaterialTheme.colorScheme.primary)
-                    )
-                ) {
-                    Text("Lihat", style = MaterialTheme.typography.labelLarge)
+                Icon(Icons.Default.Visibility, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Lihat Materi", fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, null, modifier = Modifier.size(14.dp), tint = Color.LightGray)
+                    Spacer(Modifier.width(4.dp))
+                    Text(item.author_name, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 }
 
-                // Row ikon (Download, Edit, Hapus)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                IconButton(onClick = {
+                    viewModel.downloadMaterial(context, item.file_path, item.subject)
+                }) {
+                    Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
+                }
 
-                    // DOWNLOAD (Selalu ada)
-                    IconButton(
-                        onClick = { /* TODO: Implement download logic */ },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_download),
-                            contentDescription = "Download",
-                            modifier = Modifier.size(24.dp)
-                        )
+                if (isMyMaterial) {
+                    IconButton(onClick = {
+                        viewModel.setEditData(item)
+                        navController.navigate("editMaterial")
+                    }) {
+                        Icon(Icons.Default.Edit, null, tint = Color.Gray)
                     }
 
-                    if (isMyMaterial) {
-
-                        // EDIT
-                        IconButton(
-                            // FIX: Gunakan encodedMaterialId yang sudah dideklarasikan di atas
-                            onClick = { navController.navigate("editMaterial/$encodedMaterialId") },
-                            colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = MaterialTheme.colorScheme.secondary
-                            )
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_edit),
-                                contentDescription = "Edit",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                        // DELETE
-                        IconButton(
-                            onClick = { viewModel.deleteMaterial(item) },
-                            colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_delete),
-                                contentDescription = "Hapus",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        enabled = !isLoading
+                    ) {
+                        Icon(Icons.Default.Delete, null, tint = Color.Red)
                     }
                 }
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Hapus Materi?") },
+            text = { Text("Apakah Anda yakin ingin menghapus materi '${item.subject}' ini?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteMaterial(item.id)
+                        showDeleteDialog = false
+                    }
+                ) { Text("Hapus", color = Color.Red) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") }
+            }
+        )
     }
 }

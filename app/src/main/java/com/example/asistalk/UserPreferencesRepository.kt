@@ -14,6 +14,7 @@ class UserPreferencesRepository(private val context: Context) {
 
     // ===== KEYS =====
     private object Keys {
+        val USER_ID = intPreferencesKey("user_id")
         val USERNAME = stringPreferencesKey("username")
         val FULLNAME = stringPreferencesKey("fullname")
         val EMAIL = stringPreferencesKey("email")
@@ -22,8 +23,8 @@ class UserPreferencesRepository(private val context: Context) {
         val GENDER = stringPreferencesKey("gender")
         val PROFILE_IMAGE = stringPreferencesKey("profile_image")
         val PASSWORD = stringPreferencesKey("password")
-        val TOKEN = stringPreferencesKey("token")
         val REMEMBER_ME = booleanPreferencesKey("remember_me")
+        // Token tidak lagi disimpan di DataStore agar sinkron dengan AuthInterceptor
     }
 
     // ===== LOGIN CREDENTIALS =====
@@ -45,21 +46,20 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
-    // ===== TOKEN =====
-    suspend fun saveToken(token: String) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.TOKEN] = token
-        }
+    // ===== TOKEN (DIALIKKAN KE TOKENMANAGER) =====
+    // Perbaikan: Simpan ke SharedPreferences agar terbaca oleh Interceptor
+    fun saveToken(token: String) {
+        TokenManager.saveToken(context, token)
     }
 
-    suspend fun getToken(): String {
-        return context.dataStore.data.first()[Keys.TOKEN] ?: ""
+    fun getToken(): String {
+        return TokenManager.getToken(context) ?: ""
     }
 
     // ===== USER PROFILE (LENGKAP) =====
     suspend fun saveFullProfile(
-        username: String,
         fullName: String,
+        username: String,
         email: String,
         phone: String,
         birthDate: String,
@@ -77,13 +77,24 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
+    // Tambahan fungsi untuk simpan ID saja jika diperlukan terpisah
+    suspend fun saveUserId(userId: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.USER_ID] = userId
+        }
+    }
+
     // ===== FLOWS (DIBACA UI & VIEWMODEL) =====
-    val usernameFlow: Flow<String> = context.dataStore.data.map {
-        it[Keys.USERNAME] ?: ""
+    val userIdFlow: Flow<Int> = context.dataStore.data.map {
+        it[Keys.USER_ID] ?: -1
     }
 
     val fullnameFlow: Flow<String> = context.dataStore.data.map {
         it[Keys.FULLNAME] ?: ""
+    }
+
+    val usernameFlow: Flow<String> = context.dataStore.data.map {
+        it[Keys.USERNAME] ?: ""
     }
 
     val emailFlow: Flow<String> = context.dataStore.data.map {
@@ -101,11 +112,11 @@ class UserPreferencesRepository(private val context: Context) {
     val genderFlow: Flow<String> = context.dataStore.data.map {
         it[Keys.GENDER] ?: ""
     }
+
     val profileImageFlow: Flow<String> = context.dataStore.data.map {
         it[Keys.PROFILE_IMAGE] ?: ""
     }
 
-    // ===== REMEMBER ME =====
     val rememberMeFlow: Flow<Boolean> = context.dataStore.data.map {
         it[Keys.REMEMBER_ME] ?: false
     }
@@ -117,10 +128,10 @@ class UserPreferencesRepository(private val context: Context) {
     val savedPasswordFlow: Flow<String> = context.dataStore.data.map {
         it[Keys.PASSWORD] ?: ""
     }
-
     // ===== LOGOUT =====
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
+        TokenManager.clearToken(context) // Hapus token juga
     }
     private val USER_ID = intPreferencesKey("user_id")
 

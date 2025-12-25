@@ -1,7 +1,5 @@
-// HomeScreen dengan Header Melengkung & UI Modern
 package com.example.asistalk.ui.home
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,292 +7,271 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.asistalk.R
+import com.example.asistalk.network.MaterialItem
 import com.example.asistalk.ui.asislearn.AsisLearnViewModel
-import com.example.asistalk.ui.asislearn.MaterialItem
-import androidx.compose.ui.graphics.Brush
 import com.example.asistalk.ui.theme.Primary
 import com.example.asistalk.ui.theme.Secondary
+import com.example.asistalk.utils.UserPreferencesRepository
+import kotlinx.coroutines.flow.first
+
+// --- Model Data Lokal ---
+data class PostData(
+    val author: String,
+    val content: String,
+    val time: String = "Baru saja"
+)
 
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: AsisLearnViewModel
 ) {
-    val userName = "Suci Nurhaliza"
+    val context = LocalContext.current
+    val userPrefsRepo = remember { UserPreferencesRepository(context) }
+
     val materials by viewModel.materials.collectAsState()
-    val latestMaterials = materials.take(2)
+    val isLoading by viewModel.isLoading.collectAsState()
+    val fullName = viewModel.currentUserFullName
+    val displayName = remember(fullName) {
+        if (fullName.isNotBlank()) fullName.split(" ").first() else "Mahasiswa"
+    }
 
-    val recentPosts = listOf(
-        PostData("Zakiya Aulia", "23115212029", "UTS MPSI tadi susah banget ga si?", R.drawable.ic_image, R.drawable.ic_image),
-        PostData("Ria Puspita", "23115212030", "Grup belajar ASD sudah dibuat", R.drawable.ic_image, R.drawable.ic_image)
-    )
+    LaunchedEffect(Unit) {
+        val id = userPrefsRepo.userIdFlow.first()
+        val nameFromPrefs = userPrefsRepo.fullnameFlow.first()
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(bottom = 80.dp)
-    ) {
-        // HEADER + WELCOME CARD
-        item {
-            Box {
-                HomeHeader()
-                HeaderWithLogo(navController)
-                FloatingWelcomeCard(
-                    userName = userName,
-                    navController = navController,
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .offset(y = 130.dp)
+        viewModel.setSession(id, nameFromPrefs)
+        viewModel.fetchAllMaterials()
+    }
+
+    Scaffold(
+        containerColor = Color(0xFFF8FAFC)
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(bottom = 32.dp)
+        ) {
+            // 1. HEADER
+            item {
+                HeaderSection()
+            }
+
+            // 2. FLOATING CARD
+            item {
+                WelcomeCard(
+                    displayName = displayName,
+                    onDiskusiClick = { navController.navigate("asishub") },
+                    onMateriClick = { navController.navigate("asislearn") }
                 )
             }
-            Spacer(Modifier.height(110.dp))
-        }
 
-        // MATERI TERBARU
-        item {
-            SectionHeaderWithAction(
-                title = "Materi Terbaru",
-                actionText = "Lihat Semua",
-                onActionClick = { navController.navigate("asislearn") }
-            )
-            Spacer(Modifier.height(12.dp))
-        }
-
-        item {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                latestMaterials.forEach { material ->
-                    NewMaterialCard(
-                        data = material,
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            viewModel.getMaterialByTitle(material.title)
-                            val encoded = java.net.URLEncoder.encode(material.title, "UTF-8")
-                            navController.navigate("materialDetail/$encoded")
-                        }
-                    )
-                }
-                if (latestMaterials.size == 1) Spacer(Modifier.weight(1f))
+            // 3. SECTION MATERI TERBARU
+            item {
+                SectionHeader(
+                    title = "Materi Terbaru",
+                    onActionClick = { navController.navigate("asislearn") }
+                )
             }
-            Spacer(Modifier.height(28.dp))
-        }
 
-        // DISKUSI TERBARU
-        item {
-            SectionHeaderWithAction(
-                title = "Diskusi Terbaru",
-                actionText = "Ke AsisHub",
-                onActionClick = { navController.navigate("asishub") }
+            if (isLoading) {
+                item { LoadingIndicator() }
+            } else {
+                items(materials.take(2)) { material ->
+                    NewMaterialCard(material) {
+                        navController.navigate("detailMaterial/${material.id}")
+                    }
+                }
+            }
+
+            // 4. DISKUSI
+            item {
+                Spacer(Modifier.height(16.dp))
+                SectionHeader(
+                    title = "Diskusi Populer",
+                    onActionClick = { navController.navigate("asishub") }
+                )
+            }
+
+            val dummyPosts = listOf(
+                PostData("Zakiya Aulia", "UTS MPSI tadi susah banget, ada yang punya kisi-kisi?", "10m yang lalu"),
+                PostData("Ria Puspita", "Grup belajar ASD sudah dibuat, cek link di bio ya guys!", "1j yang lalu")
             )
-            Spacer(Modifier.height(12.dp))
-        }
 
-        items(recentPosts) { post ->
-            RecentPostCard(post) { navController.navigate("asishub") }
-            Spacer(Modifier.height(14.dp))
+            items(dummyPosts) { post ->
+                RecentPostCard(post)
+            }
         }
     }
 }
 
-// ================== COMPONENT ==================
-
-data class PostData(
-    val author: String,
-    val nim: String,
-    val content: String,
-    val profileImageRes: Int,
-    val attachedImageRes: Int
-)
+// --- Komponen UI Tetap Sama ---
 
 @Composable
-fun HomeHeader() {
+fun HeaderSection() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
+            .height(200.dp)
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Secondary,
-                        Primary
-                    )
-                ),
-                shape = RoundedCornerShape(
-                    bottomStart = 60.dp,
-                    bottomEnd = 60.dp
-                )
+                brush = Brush.verticalGradient(colors = listOf(Primary, Secondary)),
+                shape = RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp)
             )
-    )
-}
-
-@Composable
-fun HeaderWithLogo(navController: NavController) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 24.dp, vertical = 40.dp)
     ) {
-        Image(
-            painter = painterResource(R.drawable.logo_asistalk_putih),
-            contentDescription = null,
-            modifier = Modifier.size(36.dp)
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            "AsisTalk",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color.White
-        )
-        Spacer(Modifier.weight(1f))
-        IconButton(onClick = { navController.navigate("notif") }) {
-            Icon(Icons.Default.NotificationsNone, null, tint = Color.White)
+        Column {
+            Text("AsisTalk", color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp)
+            Text("Selamat Datang di AsisTalk", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, lineHeight = 34.sp)
         }
     }
 }
 
 @Composable
-fun FloatingWelcomeCard(
-    userName: String,
-    navController: NavController,
-    modifier: Modifier
+fun WelcomeCard(
+    displayName: String,
+    onDiskusiClick: () -> Unit,
+    onMateriClick: () -> Unit
 ) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        elevation = CardDefaults.cardElevation(8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .offset(y = (-50).dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
     ) {
-        Column(Modifier.padding(20.dp)) {
-            Text("Selamat Datang👋", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                userName,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                    onClick = { navController.navigate("asishub") }
-                ) { Text("Diskusi") }
+        Column(Modifier.padding(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(45.dp).background(Primary.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.WavingHand, null, tint = Primary, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Halo, $displayName!", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Mau belajar apa hari ini?", fontSize = 13.sp, color = Color.Gray)
+                }
+            }
 
-                Button(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                    onClick = { navController.navigate("asislearn") }
-                ) { Text("Materi") }
+            Spacer(Modifier.height(20.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                ActionHomeButton("Diskusi", Icons.Default.ChatBubbleOutline, Modifier.weight(1f), onDiskusiClick)
+                ActionHomeButton("Materi", Icons.Default.MenuBook, Modifier.weight(1f), onMateriClick)
             }
         }
     }
 }
 
 @Composable
-fun SectionHeaderWithAction(title: String, actionText: String, onActionClick: () -> Unit) {
+fun ActionHomeButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, Primary),
+        shadowElevation = 2.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Brush.horizontalGradient(listOf(Primary.copy(0.08f), Secondary.copy(0.02f)))),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = Primary, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = Primary)
+            }
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String, onActionClick: () -> Unit) {
     Row(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF1E293B))
         Spacer(Modifier.weight(1f))
         TextButton(onClick = onActionClick) {
-            Text(actionText)
-            Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(16.dp))
+            Text("Lihat Semua", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(16.dp), tint = Primary)
         }
     }
 }
 
 @Composable
-fun NewMaterialCard(data: MaterialItem, modifier: Modifier, onClick: () -> Unit) {
+fun NewMaterialCard(data: MaterialItem, onClick: () -> Unit) {
     Card(
-        modifier = modifier.height(160.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(0.5.dp),
         onClick = onClick
     ) {
-        Column(
-            Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(data.icon),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(Secondary.copy(0.1f)), Alignment.Center) {
+                Icon(Icons.Default.Description, null, tint = Secondary)
             }
-            Column {
-                Text(data.title, fontWeight = FontWeight.Bold, maxLines = 2)
-                Text(
-                    data.author,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(data.subject, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF334155))
+                Text(data.topic, fontSize = 13.sp, color = Color.Gray)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    Icon(Icons.Default.Person, null, modifier = Modifier.size(12.dp), tint = Color.LightGray)
+                    Spacer(Modifier.width(4.dp))
+                    Text(data.author_name, fontSize = 11.sp, color = Color.LightGray)
+                }
             }
         }
     }
 }
 
 @Composable
-fun RecentPostCard(data: PostData, onClick: () -> Unit) {
+fun RecentPostCard(data: PostData) {
     Card(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(2.dp),
-        onClick = onClick
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(0.5.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(data.profileImageRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(44.dp).clip(CircleShape)
-                )
-                Spacer(Modifier.width(12.dp))
+                Box(Modifier.size(32.dp).background(Color(0xFFE2E8F0), CircleShape))
+                Spacer(Modifier.width(10.dp))
                 Column {
-                    Text(data.author, fontWeight = FontWeight.Bold)
-                    Text(data.nim, style = MaterialTheme.typography.labelMedium)
+                    Text(data.author, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1E293B))
+                    Text(data.time, fontSize = 11.sp, color = Color.LightGray)
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Image(
-                painter = painterResource(data.attachedImageRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(14.dp))
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(data.content, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text(data.content, fontSize = 14.sp, color = Color(0xFF475569), lineHeight = 20.sp)
         }
+    }
+}
+@Composable
+fun LoadingIndicator() {
+    Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) {
+        CircularProgressIndicator(color = Primary, strokeWidth = 3.dp)
     }
 }

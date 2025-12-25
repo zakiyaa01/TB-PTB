@@ -1,5 +1,6 @@
-package com.example.asistalk.utils
+package com.example.asistalk.network
 
+import com.example.asistalk.utils.TokenManager
 import android.content.Context
 import okhttp3.Interceptor
 import okhttp3.Response

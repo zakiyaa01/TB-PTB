@@ -48,6 +48,29 @@ data class UserProfile(
     val gender: String,
     val profile_image: String
 )
+
+data class CommonResponse(
+    val success: Boolean,
+    val message: String
+)
+
+data class MaterialResponse(
+    val success: Boolean,
+    val data: List<MaterialItem>
+)
+
+data class MaterialItem(
+    val id: Int,
+    val user_id: Int,
+    val subject: String,
+    val topic: String,
+    val description: String?,
+    val file_type: String,
+    val file_path: String,
+    val author_name: String,
+    val profile_image: String?
+)
+
 // =====================
 // ASISHUB - POSTS
 // =====================
@@ -79,6 +102,7 @@ data class CommentResponse(
     val username: String,
     val profile_image: String?
 )
+
 // =====================
 // API SERVICE
 // =====================
@@ -87,6 +111,7 @@ interface ApiService {
     suspend fun loginUser(
         @Body request: LoginRequest
     ): LoginResponse
+  
     @Multipart
     @POST("api/auth/register")
     suspend fun registerUser(
@@ -99,22 +124,55 @@ interface ApiService {
         @Part("gender") gender: RequestBody,
         @Part profile_image: MultipartBody.Part
     ): RegisterResponse
+
     @GET("api/auth/profile/{id}")
-    suspend fun getProfile(
+    suspend fun getProfile(@Path("id") id: Int): ProfileResponse
+
+    // =====================
+    // ASISLEARN MATERIALS
+    // =====================
+    @GET("api/materials")
+    suspend fun getAllMaterials(): MaterialResponse
+
+    @Multipart
+    @POST("api/materials/")
+    suspend fun uploadMaterial(
+        @Part("subject") subject: RequestBody,
+        @Part("topic") topic: RequestBody,
+        @Part("description") description: RequestBody?,
+        @Part("file_type") fileType: RequestBody,
+        @Part file: MultipartBody.Part
+    ): CommonResponse
+
+    @Multipart
+    @PUT("api/materials/{id}")
+    suspend fun updateMaterial(
+        @Path("id") id: Int,
+        @Part("subject") subject: RequestBody,
+        @Part("topic") topic: RequestBody,
+        @Part("description") description: RequestBody?,
+        @Part("file_type") fileType: RequestBody,
+        @Part file: MultipartBody.Part? = null
+    ): CommonResponse
+
+    @DELETE("api/materials/{id}")
+    suspend fun deleteMaterial(
         @Path("id") id: Int
-    ): ProfileResponse
-// =====================
-// POSTS
-// =====================
+    ): CommonResponse
+
+    // =====================
+    // POSTS
+    // =====================
     @Multipart
     @POST("api/posts")
     suspend fun createPost(
         @Part("content") content: RequestBody,
         @Part media: MultipartBody.Part?
     ): CreatePostResponse
+
     @GET("api/posts")
-    suspend fun getPosts(
-    ): List<PostResponse>
+    suspend fun getPosts(): List<PostResponse>
+
     @Multipart
     @PUT("api/posts/{id}")
     suspend fun updatePost(
@@ -122,28 +180,33 @@ interface ApiService {
         @Part("content") content: RequestBody,
         @Part media: MultipartBody.Part?
     ): CreatePostResponse
+
     @DELETE("api/posts/{id}")
     suspend fun deletePost(
         @Path("id") id: String
     )
-// =====================
-// COMMENTS
-// =====================
+
+    // =====================
+    // COMMENTS
+    // =====================
     @POST("api/comments")
     suspend fun createComment(
         @Body body: CreateCommentRequest
     )
+
     @GET("api/comments/{postId}")
     suspend fun getComments(
         @Path("postId") postId: Int
     ): List<CommentResponse>
+
     @PUT("api/comments/{id}")
     suspend fun updateComment(
         @Path("id") id: String,
         @Body body: Map<String, String>
     )
+
     @DELETE("api/comments/{id}")
     suspend fun deleteComment(
         @Path("id") id: String
     )
-}
+} 
