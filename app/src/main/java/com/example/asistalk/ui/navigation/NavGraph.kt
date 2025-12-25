@@ -82,11 +82,18 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         startDestination = "home",
         modifier = modifier
     ) {
-        // HOME
-        composable("home") { backStackEntry ->
-            // Gunakan viewModel yang sama agar data sinkron
+        composable("home") {
+            // Memanggil ViewModel Suci (Materi & Sesi)
             val asisLearnViewModel: AsisLearnViewModel = viewModel()
-            HomeScreen(navController = navController, viewModel = asisLearnViewModel)
+
+            // Memanggil ViewModel Zakiya (Diskusi/AsisTalk)
+            val asisHubViewModel: AsisHubViewModel = viewModel()
+
+            HomeScreen(
+                navController = navController,
+                asisLearnVm = asisLearnViewModel,
+                asisHubVm = asisHubViewModel
+            )
         }
 
         // ============================================================
