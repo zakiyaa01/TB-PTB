@@ -83,7 +83,7 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[Keys.USER_ID] = userId
         }
     }
-
+    private val USER_ID = intPreferencesKey("user_id")
     // ===== FLOWS (DIBACA UI & VIEWMODEL) =====
     val userIdFlow: Flow<Int> = context.dataStore.data.map {
         it[Keys.USER_ID] ?: -1
@@ -133,16 +133,4 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { it.clear() }
         TokenManager.clearToken(context) // Hapus token juga
     }
-    private val USER_ID = intPreferencesKey("user_id")
-
-    val userIdFlow = context.dataStore.data.map {
-        it[USER_ID] ?: -1
-    }
-
-    suspend fun saveUserId(id: Int) {
-        context.dataStore.edit {
-            it[USER_ID] = id
-        }
-    }
-
 }
