@@ -60,6 +60,7 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("androidx.webkit:webkit:1.8.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     // Retrofit untuk koneksi API
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

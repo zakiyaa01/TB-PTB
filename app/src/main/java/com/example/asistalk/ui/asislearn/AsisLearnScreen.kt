@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.asistalk.R
 import com.example.asistalk.network.MaterialItem
+import com.example.asistalk.utils.NotificationHelper // Import Helper Notifikasi
 import com.example.asistalk.utils.UserPreferencesRepository
 import kotlinx.coroutines.flow.first
 
@@ -43,23 +44,39 @@ fun AsisLearnScreen(
     val materials by viewModel.materials.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    // --- LOGIKA NOTIFIKASI OTOMATIS (Materi Baru) ---
+    var prevSize by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(materials) {
+        // Deteksi jika materi bertambah (ada yang baru upload)
+        if (materials.size > prevSize && prevSize != 0) {
+            val latest = materials.firstOrNull()
+            // Jika pengunggah bukan user saat ini, catat sebagai notifikasi
+            if (latest != null && latest.user_id != viewModel.currentUserId) {
+                NotificationHelper.addLog(
+                    context,
+                    "Materi Baru",
+                    "${latest.author_name} mengunggah materi baru: ${latest.subject}"
+                )
+            }
+        }
+        if (materials.isNotEmpty()) prevSize = materials.size
+    }
+
     // Ambil Session & Fetch Materi Pertama Kali
     LaunchedEffect(Unit) {
         val id = userPrefsRepo.userIdFlow.first()
         val fullName = userPrefsRepo.fullnameFlow.first()
-
         viewModel.setSession(id, fullName)
         viewModel.fetchAllMaterials()
     }
 
-    // PERBAIKAN: Filter reaktif & Cek Download
-    // Menghapus 'materials' dari daftar pengamat agar tidak terjadi infinite loop
+    // Filter reaktif & Cek Download
     LaunchedEffect(selectedTab, searchQuery) {
         viewModel.selectedTabIndex = selectedTab
         viewModel.searchQuery = searchQuery
 
         if (selectedTab == 2) {
-            // Memanggil versi tanpa parameter 'materials' sesuai perbaikan ViewModel
             viewModel.checkDownloadedMaterials(context)
         } else {
             viewModel.filterMaterials()
@@ -72,9 +89,10 @@ fun AsisLearnScreen(
                 .fillMaxSize()
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 24.dp)
         ) {
 
-            // --- 1. HEADER (Logo & Notif) ---
+            // --- 1. HEADER (Logo & Notif Khusus) ---
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -95,13 +113,18 @@ fun AsisLearnScreen(
                         color = Color(0xFF2098D1)
                     )
                     Spacer(modifier = Modifier.weight(1f))
+
+                    // ICON LONCENG (Navigasi ke Notif Khusus AsisLearn)
                     Icon(
                         painter = painterResource(R.drawable.ic_notification),
                         contentDescription = "Notif",
                         tint = Color.Black,
                         modifier = Modifier
                             .size(28.dp)
-                            .clickable { navController.navigate("notif") }
+                            .clickable {
+                                // Rute diarahkan ke notif internal AsisLearn
+                                navController.navigate("asislearn_notif")
+                            }
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -143,7 +166,7 @@ fun AsisLearnScreen(
                     ) {
                         Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Upload Materi", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Upload", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -184,14 +207,14 @@ fun AsisLearnScreen(
             when {
                 isLoading -> {
                     item {
-                        Box(Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.fillMaxWidth().padding(top = 40.dp), Alignment.Center) {
                             CircularProgressIndicator(strokeWidth = 3.dp)
                         }
                     }
                 }
                 materials.isEmpty() -> {
                     item {
-                        Box(Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.fillMaxWidth().padding(top = 40.dp), Alignment.Center) {
                             Text("Materi tidak ditemukan", color = Color.Gray)
                         }
                     }
@@ -283,11 +306,7 @@ fun MaterialCard(
                 }
 
                 IconButton(onClick = {
-                    viewModel.downloadMaterial(
-                        context = context,
-                        url = item.file_path,
-                        subject = item.subject
-                    )
+                    viewModel.downloadMaterial(context, item.file_path, item.subject)
                 }) {
                     Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.primary)
                 }

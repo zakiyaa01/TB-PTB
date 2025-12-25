@@ -91,6 +91,10 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                 AsisLearnScreen(navController = navController, viewModel = vm)
             }
 
+            composable("asislearn_notif") {
+                NotificationAsisLearnScreen(navController = navController)
+            }
+
             composable("uploadMaterial") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("asislearn")

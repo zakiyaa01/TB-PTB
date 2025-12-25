@@ -16,6 +16,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.asistalk.network.MaterialItem
 import com.example.asistalk.network.RetrofitClient
+import com.example.asistalk.utils.NotificationHelper // Impor Helper Notifikasi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +43,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
     private val _selectedMaterial = MutableStateFlow<MaterialItem?>(null)
     val selectedMaterial = _selectedMaterial.asStateFlow()
 
-    // State untuk menyimpan ID materi yang sudah ada di folder Download lokal
     private val _downloadedIds = MutableStateFlow<Set<Int>>(emptySet())
     val downloadedIds = _downloadedIds.asStateFlow()
 
@@ -78,7 +78,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         currentUserFullName = fullName
     }
 
-    // --- FETCH DATA ---
     fun fetchAllMaterials() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -96,15 +95,12 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- LOGIKA FILTER (Termasuk Tab Download) ---
     fun filterMaterials() {
         var filtered = _allMaterials.value
-
         when (selectedTabIndex) {
             1 -> filtered = filtered.filter { it.user_id == currentUserId }
             2 -> filtered = filtered.filter { downloadedIds.value.contains(it.id) }
         }
-
         if (searchQuery.isNotEmpty()) {
             filtered = filtered.filter {
                 it.subject.contains(searchQuery, ignoreCase = true) ||
@@ -114,7 +110,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _materials.value = filtered
     }
 
-    // --- FUNGSI DOWNLOAD ---
+    // --- FUNGSI DOWNLOAD (Ditambah Log Notif) ---
     fun downloadMaterial(context: Context, url: String, subject: String) {
         try {
             val adjustedUrl = url.replace("localhost", "10.0.2.2")
@@ -125,10 +121,12 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                 .setDescription(subject)
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                .setAllowedOverMetered(true)
 
             val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             manager.enqueue(request)
+
+            // CATAT NOTIFIKASI
+            NotificationHelper.addLog(context, "Unduhan Dimulai", "Materi '$subject' sedang diunduh.")
 
             Toast.makeText(context, "Unduhan dimulai...", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -137,28 +135,17 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- PERBAIKAN FUNGSI CEK FILE LOKAL ---
-    // Menggunakan data internal _allMaterials untuk menghindari loop dari UI
     fun checkDownloadedMaterials(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentAllData = _allMaterials.value
             val downloadedSet = mutableSetOf<Int>()
-
             currentAllData.forEach { item ->
                 val fileName = "${item.subject.replace(" ", "_")}.pdf"
-                val file = File(
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                    fileName
-                )
-                if (file.exists()) {
-                    downloadedSet.add(item.id)
-                }
+                val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName)
+                if (file.exists()) downloadedSet.add(item.id)
             }
-
-            // Update state di Main Thread setelah pengecekan selesai
             withContext(Dispatchers.Main) {
                 _downloadedIds.value = downloadedSet
-                // Segera panggil filter agar tab Download terisi tanpa kedip
                 filterMaterials()
             }
         }
@@ -188,7 +175,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _currentFileName.value = item.file_path.substringAfterLast("/")
     }
 
-    // --- UPLOAD & UPDATE MATERIAL ---
+    // --- UPLOAD (Ditambah Log Notif) ---
     fun uploadMaterial(context: Context) {
         val uri = _selectedFileUri.value ?: return
         viewModelScope.launch {
@@ -205,7 +192,11 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                         createMultipart(it, originalName)
                     )
                     _uploadEvent.value = response.success
-                    if (response.success) fetchAllMaterials()
+                    if (response.success) {
+                        // CATAT NOTIFIKASI
+                        NotificationHelper.addLog(context, "Upload Berhasil", "Materi '${_subject.value}' telah diunggah.")
+                        fetchAllMaterials()
+                    }
                 }
             } catch (e: Exception) {
                 _uploadEvent.value = false
@@ -215,6 +206,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    // --- UPDATE (Ditambah Log Notif) ---
     fun updateMaterial(context: Context) {
         val id = editingMaterialId ?: return
         viewModelScope.launch {
@@ -230,15 +222,15 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                 }
 
                 val response = repository.updateMaterial(
-                    id,
-                    createPart(_subject.value),
-                    createPart(_topic.value),
-                    createPart(_description.value),
-                    createPart(_fileType.value),
-                    filePart
+                    id, createPart(_subject.value), createPart(_topic.value),
+                    createPart(_description.value), createPart(_fileType.value), filePart
                 )
                 _uploadEvent.value = response.success
-                if (response.success) fetchAllMaterials()
+                if (response.success) {
+                    // CATAT NOTIFIKASI
+                    NotificationHelper.addLog(context, "Materi Diperbarui", "Materi '${_subject.value}' berhasil diubah.")
+                    fetchAllMaterials()
+                }
             } catch (e: Exception) {
                 _uploadEvent.value = false
             } finally {
@@ -247,12 +239,16 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    // --- DELETE (Ditambah Log Notif) ---
     fun deleteMaterial(id: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val response = repository.deleteMaterial(id)
                 if (response.success) {
+                    // CATAT NOTIFIKASI
+                    NotificationHelper.addLog(getApplication(), "Materi Dihapus", "Materi telah berhasil dihapus dari sistem.")
+
                     _allMaterials.value = _allMaterials.value.filter { it.id != id }
                     filterMaterials()
                 }
