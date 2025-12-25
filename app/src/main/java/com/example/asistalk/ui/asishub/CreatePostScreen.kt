@@ -8,13 +8,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,41 +32,34 @@ fun CreatePostScreen(
 ) {
     var postContent by remember { mutableStateOf("") }
     val context = LocalContext.current
-
-    val imageUriFromVM by vm.selectedImageUri.collectAsState()
+    val selectedImageUri by vm.selectedImageUri.collectAsState()
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
-    LaunchedEffect(imageUriFromVM) {
-        imageUri = imageUriFromVM
+    LaunchedEffect(selectedImageUri) {
+        imageUri = selectedImageUri
     }
 
-    // --- PERUBAHAN 1: Menggabungkan Launcher Galeri ---
-    // Launcher untuk memilih MEDIA (Gambar DAN Video) dari galeri
+    // ===== GALERI =====
     val pickMediaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri: Uri? ->
+        onResult = { uri ->
             uri?.let {
-                // Saat ini kita anggap semua yang dipilih adalah gambar
-                // TODO: Di masa depan, Anda bisa menambahkan logika untuk membedakan URI video
-                imageUri = it // Update UI
-                vm.onImageSelected(it) // Simpan ke ViewModel
+                imageUri = it
+                vm.onImageSelected(it)
             }
         }
     )
 
-    // Launcher untuk kamera tidak berubah
+    // ===== KAMERA =====
     val takePhotoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
-        onResult = { success ->
-            if (success) { /* URI sudah di-update sebelum launch, UI akan otomatis refresh */ }
-        }
+        onResult = { }
     )
 
-    // Launcher untuk izin kamera tidak berubah
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
+        onResult = { granted ->
+            if (granted) {
                 val uri = ComposeFileProvider.getImageUri(context)
                 imageUri = uri
                 vm.onImageSelected(uri)
@@ -84,29 +75,31 @@ fun CreatePostScreen(
     }
 
     Column(
-        Modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Buat Postingan Baru", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
+        Text(
+            text = "Buat Postingan Baru",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold
+        )
+
         Spacer(Modifier.height(16.dp))
 
-        // Pratinjau gambar (tidak berubah)
+        // ===== PREVIEW IMAGE =====
         imageUri?.let { uri ->
-            Box(
+            Image(
+                painter = rememberAsyncImagePainter(uri),
+                contentDescription = "Preview",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(RoundedCornerShape(12.dp))
-            ) {
-                Image(
-                    painter = rememberAsyncImagePainter(uri),
-                    contentDescription = "Pratinjau Gambar",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-            Spacer(Modifier.height(16.dp))
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(Modifier.height(12.dp))
         }
 
         OutlinedTextField(
@@ -115,51 +108,46 @@ fun CreatePostScreen(
             placeholder = { Text("Apa yang ingin anda diskusikan?") },
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
         )
 
         Spacer(Modifier.height(16.dp))
 
-        // --- PERUBAHAN 2: Tombol-tombol Aksi yang Sudah Digabung ---
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Tombol 1: Buka Galeri (untuk Foto & Video)
+
             Button(onClick = {
-                // Membuka galeri yang menampilkan gambar DAN video
-                pickMediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                pickMediaLauncher.launch(
+                    PickVisualMediaRequest(
+                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                    )
+                )
             }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.PhotoLibrary, contentDescription = "Galeri")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Galeri")
-                }
+                Icon(Icons.Default.PhotoLibrary, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Galeri")
             }
 
-            // Tombol 2: Ambil Foto Baru dari Kamera
             Button(onClick = {
                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.CameraAlt, contentDescription = "Kamera")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Kamera")
-                }
+                Icon(Icons.Default.CameraAlt, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Kamera")
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Tombol Posting (tidak berubah)
+        // ===== POST BUTTON =====
         Button(
             onClick = {
-                if (postContent.isNotBlank() || imageUri != null) {
-                    vm.addPost(
-                        author = "Zakiya Aulia",
-                        content = postContent,
-                        imageUri = imageUri
-                    )
-                    navController.popBackStack()
-                }
+                vm.createPost(
+                    content = postContent,
+                    imageUri = imageUri
+                )
+                navController.popBackStack()
             },
+            enabled = postContent.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Posting")

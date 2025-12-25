@@ -7,6 +7,8 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.DELETE
 import retrofit2.http.Part
 import retrofit2.http.Path
 
@@ -17,13 +19,11 @@ data class LoginRequest(
     val username: String,
     val password: String
 )
-
 data class LoginResponse(
     val success: Boolean,
     val token: String,
     val user: UserProfile
 )
-
 // =====================
 // REGISTER
 // =====================
@@ -31,15 +31,13 @@ data class RegisterResponse(
     val success: Boolean,
     val message: String
 )
-
 // =====================
 // PROFILE
 // =====================
 data class ProfileResponse(
     val success: Boolean,
-    val data: UserProfile
+    val user: UserProfile
 )
-
 data class UserProfile(
     val id: Int,
     val full_name: String,
@@ -50,17 +48,45 @@ data class UserProfile(
     val gender: String,
     val profile_image: String
 )
-
+// =====================
+// ASISHUB - POSTS
+// =====================
+data class CreatePostResponse(
+    val success: Boolean,
+    val post: PostResponse
+)
+data class PostResponse(
+    val id: Int,
+    val content: String,
+    val media: String?,
+    val media_type: String?,
+    val created_at: String,
+    val user_id: Int,
+    val username: String,
+    val profile_image: String?
+)
+// =====================
+// ASISHUB - COMMENT
+// =====================
+data class CreateCommentRequest(
+    val post_id: Int,
+    val comment: String
+)
+data class CommentResponse(
+    val id: Int,
+    val comment: String,
+    val created_at: String,
+    val username: String,
+    val profile_image: String?
+)
 // =====================
 // API SERVICE
 // =====================
 interface ApiService {
-
     @POST("api/auth/login")
     suspend fun loginUser(
         @Body request: LoginRequest
     ): LoginResponse
-
     @Multipart
     @POST("api/auth/register")
     suspend fun registerUser(
@@ -73,38 +99,51 @@ interface ApiService {
         @Part("gender") gender: RequestBody,
         @Part profile_image: MultipartBody.Part
     ): RegisterResponse
-
     @GET("api/auth/profile/{id}")
     suspend fun getProfile(
         @Path("id") id: Int
     ): ProfileResponse
-
+// =====================
 // POSTS
-    @GET("api/posts")
-    suspend fun getPosts(
-        @Header("Authorization") token: String
-    ): List<PostResponse>
-
+// =====================
     @Multipart
     @POST("api/posts")
     suspend fun createPost(
-        @Header("Authorization") token: String,
         @Part("content") content: RequestBody,
         @Part media: MultipartBody.Part?
-    ): PostResponse
-
-    // =====================
+    ): CreatePostResponse
+    @GET("api/posts")
+    suspend fun getPosts(
+    ): List<PostResponse>
+    @Multipart
+    @PUT("api/posts/{id}")
+    suspend fun updatePost(
+        @Path("id") id: String,
+        @Part("content") content: RequestBody,
+        @Part media: MultipartBody.Part?
+    ): CreatePostResponse
+    @DELETE("api/posts/{id}")
+    suspend fun deletePost(
+        @Path("id") id: String
+    )
+// =====================
 // COMMENTS
 // =====================
+    @POST("api/comments")
+    suspend fun createComment(
+        @Body body: CreateCommentRequest
+    )
     @GET("api/comments/{postId}")
     suspend fun getComments(
         @Path("postId") postId: Int
     ): List<CommentResponse>
-
-    @POST("api/comments")
-    suspend fun createComment(
-        @Header("Authorization") token: String,
-        @Body body: CreateCommentRequest
-    ): CommentResponse
-
+    @PUT("api/comments/{id}")
+    suspend fun updateComment(
+        @Path("id") id: String,
+        @Body body: Map<String, String>
+    )
+    @DELETE("api/comments/{id}")
+    suspend fun deleteComment(
+        @Path("id") id: String
+    )
 }

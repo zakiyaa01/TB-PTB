@@ -122,4 +122,16 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }
+    private val USER_ID = intPreferencesKey("user_id")
+
+    val userIdFlow = context.dataStore.data.map {
+        it[USER_ID] ?: -1
+    }
+
+    suspend fun saveUserId(id: Int) {
+        context.dataStore.edit {
+            it[USER_ID] = id
+        }
+    }
+
 }

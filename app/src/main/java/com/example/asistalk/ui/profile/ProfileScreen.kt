@@ -30,34 +30,34 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.first
 import com.example.asistalk.utils.UserPreferencesRepository
 import androidx.compose.runtime.*
+import coil.request.ImageRequest
 
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    profileViewModel: ProfileViewModel = viewModel()
+    profileViewModel: ProfileViewModel
 ) {
-    val uiState = profileViewModel.uiState
     val context = LocalContext.current
+    val uiState = profileViewModel.uiState
     val userPrefs = remember { UserPreferencesRepository(context) }
-    val profileImageUrl by userPrefs.profileImageFlow.collectAsState("")
+
+    // Data cadangan dari lokal
+    val localProfileImageUrl by userPrefs.profileImageFlow.collectAsState("")
 
     LaunchedEffect(Unit) {
-        val fullname = userPrefs.fullnameFlow.first()
-        val username = userPrefs.usernameFlow.first()
-        val email = userPrefs.emailFlow.first()
-        val phone = userPrefs.phoneFlow.first()
-        val birthDate = userPrefs.birthDateFlow.first()
-        val gender = userPrefs.genderFlow.first()
+        // 1. Ambil userId dari DataStore
+        val userId = userPrefs.userIdFlow.first()
 
-        profileViewModel.loadProfile(
-            fullName = fullname,
-            email = email,
-            username = username
-        )
-
-        profileViewModel.onPhoneChange(phone)
-        profileViewModel.onBirthDateChange(birthDate)
-        profileViewModel.onGenderChange(gender)
+        // Jika ID valid (bukan -1), ambil dari API
+        if (userId != -1) {
+            profileViewModel.fetchProfile(userId)
+        } else {
+            // Fallback: Ambil data lokal jika internet/ID bermasalah
+            val fullname = userPrefs.fullnameFlow.first()
+            val username = userPrefs.usernameFlow.first()
+            val email = userPrefs.emailFlow.first()
+            profileViewModel.loadProfile(fullname, email, username)
+        }
     }
 
     Column(
@@ -66,6 +66,9 @@ fun ProfileScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        if (uiState.isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
 
         Text(
             text = "Profile",
@@ -75,11 +78,21 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // 🔥 PERBAIKAN LOGIKA GAMBAR
         AsyncImage(
-            model = if (profileImageUrl.isNotEmpty())
-                profileImageUrl
-            else
-                R.drawable.logo_asistalk_hijau,
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(
+                    when {
+                        uiState.profileImageUri != null -> uiState.profileImageUri
+                        localProfileImageUrl.isNotEmpty() -> localProfileImageUrl
+                        else -> R.drawable.logo_asistalk_hijau
+                    }
+                )
+                .crossfade(true) // Menambahkan efek transisi halus
+                .crossfade(500)  // Durasi transisi 500ms
+                .placeholder(R.drawable.logo_asistalk_hijau) // Gambar saat loading
+                .error(R.drawable.logo_asistalk_hijau)       // Gambar jika URL rusak
+                .build(),
             contentDescription = "Profile Image",
             modifier = Modifier
                 .size(100.dp)
@@ -89,11 +102,14 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Menampilkan Nama dari UI State (Hasil API)
         Text(
             text = uiState.fullName.ifEmpty { "User Name" },
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
         )
 
+        // Menampilkan Email dari UI State (Hasil API)
         Text(
             text = uiState.email.ifEmpty { "user@email.com" },
             color = Color.Gray
@@ -101,21 +117,17 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // ===== MENU ITEMS =====
-
         ProfileMenuItem(
             text = "Your Profile",
             icon = Icons.Default.AccountCircle,
-            onClick = {
-                navController.navigate("yourProfile")
-            }
+            onClick = { navController.navigate("yourProfile") }
         )
 
         ProfileMenuItem(
             text = "Logout",
             icon = Icons.Default.ExitToApp,
             onClick = {
-                // TODO: logout logic
+                // Tambahkan logika logout di sini jika perlu
             },
             textColor = Color.Red,
             iconColor = Color.Red
@@ -163,6 +175,7 @@ private fun ProfileMenuItem(
 @Composable
 fun ProfileScreenPreview() {
     ProfileScreen(
-        navController = rememberNavController()
+        navController = rememberNavController(),
+        profileViewModel = viewModel()
     )
 }

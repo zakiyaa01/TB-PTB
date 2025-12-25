@@ -19,6 +19,10 @@ import com.example.asistalk.ui.profile.ProfileScreen
 import com.example.asistalk.ui.profile.ProfileViewModel
 import com.example.asistalk.ui.profile.SettingsScreen
 import com.example.asistalk.ui.profile.YourProfileScreen
+import androidx.compose.ui.platform.LocalContext
+import com.example.asistalk.network.RetrofitClient
+import com.example.asistalk.ui.profile.ProfileRepository
+import com.example.asistalk.ui.profile.ProfileViewModelFactory
 
 @Composable
 fun NavGraph(
@@ -31,8 +35,12 @@ fun NavGraph(
         modifier = modifier
     ) {
         authNavGraph(navController)
-        composable(route = Graph.MAIN) {
-            MainScreen()
+        composable(route = Graph.MAIN) { backStackEntry ->
+            val token = backStackEntry
+                .savedStateHandle
+                .get<String>("token") ?: ""
+
+            MainScreen(token = token)
         }
     }
 }
@@ -68,7 +76,10 @@ fun NavGraphBuilder.authNavGraph(navController: NavHostController) {
 
 // FUNGSI INI SEKARANG MENJADI NAVHOST UNTUK KONTEN UTAMA
 @Composable
-fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
+fun mainNavGraph(
+    navController: NavHostController,
+    modifier: Modifier = Modifier
+) {
 
     NavHost(
         navController = navController,
@@ -170,11 +181,16 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
             }
 
             composable("postDetail") { backStackEntry ->
-                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("asishub") }
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("asishub")
+                }
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
-                PostDetailScreen(navController = navController, vm = asisHubViewModel)
-            }
 
+                PostDetailScreen(
+                    navController = navController,
+                    vm = asisHubViewModel
+                )
+            }
             composable("editPost") { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("asishub") }
                 val asisHubViewModel: AsisHubViewModel = viewModel(parentEntry)
@@ -194,15 +210,43 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
             route = "profile"
         ) {
             composable("profile_main") { backStackEntry ->
-                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("profile") }
-                val profileViewModel: ProfileViewModel = viewModel(parentEntry)
-                ProfileScreen(navController = navController, profileViewModel = profileViewModel)
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("profile")
+                }
+
+                val context = LocalContext.current
+                val api = RetrofitClient.getInstance(context)
+                val repository = ProfileRepository(api)
+
+                val profileViewModel: ProfileViewModel = viewModel(
+                    parentEntry,
+                    factory = ProfileViewModelFactory(repository)
+                )
+
+                ProfileScreen(
+                    navController = navController,
+                    profileViewModel = profileViewModel
+                )
             }
 
             composable("yourProfile") { backStackEntry ->
-                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("profile") }
-                val profileViewModel: ProfileViewModel = viewModel(parentEntry)
-                YourProfileScreen(navController = navController, profileViewModel = profileViewModel)
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("profile")
+                }
+
+                val context = LocalContext.current
+                val api = RetrofitClient.getInstance(context)
+                val repository = ProfileRepository(api)
+
+                val profileViewModel: ProfileViewModel = viewModel(
+                    parentEntry,
+                    factory = ProfileViewModelFactory(repository)
+                )
+
+                YourProfileScreen(
+                    navController = navController,
+                    profileViewModel = profileViewModel
+                )
             }
 
             composable("settings") { SettingsScreen(navController = navController) }

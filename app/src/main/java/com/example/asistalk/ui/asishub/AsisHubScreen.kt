@@ -16,8 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,10 +28,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.asistalk.R
+import com.example.asistalk.network.RetrofitClient
 import com.example.asistalk.ui.asishub.components.DeleteConfirmationDialog
 import com.example.asistalk.utils.ComposeFileProvider
+
 // =============================================================
 // MAIN SCREEN – ASISHUB
 // =============================================================
@@ -43,7 +44,14 @@ fun AsisHubScreen(
     vm: AsisHubViewModel
 ) {
     val posts by vm.posts.collectAsState()
+    // 1. Ambil state foto profil user yang sedang login dari ViewModel
+    val myProfileImage by vm.currentUserProfile.collectAsState()
+
     var postToDelete by remember { mutableStateOf<Post?>(null) }
+
+    LaunchedEffect(Unit) {
+        vm.fetchPosts()
+    }
 
     postToDelete?.let { post ->
         DeleteConfirmationDialog(
@@ -96,19 +104,19 @@ fun AsisHubScreen(
             Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
         }
 
-        // --- INPUT BOX (SEKARANG DENGAN LOGIKA BARU) ---
+        // --- INPUT BOX ---
         item {
             PostInputBox(
                 onClickText = {
-                    // Saat hanya klik teks, pastikan tidak ada gambar yang terbawa
                     vm.clearSelectedImage()
                     navController.navigate("createPost")
                 },
                 onNavigateToCreatePost = {
-                    // Saat dari kamera, langsung navigasi (gambar sudah di ViewModel)
                     navController.navigate("createPost")
                 },
-                vm = vm // Teruskan ViewModel ke PostInputBox
+                vm = vm,
+                // 2. Teruskan data profil ke PostInputBox
+                profileImage = myProfileImage
             )
         }
 
@@ -119,7 +127,7 @@ fun AsisHubScreen(
                 onClickPost = {
                     vm.selectPostForViewing(post)
                     navController.navigate("postDetail")
-                              },
+                },
                 onClickEdit = {
                     vm.selectPostForEditing(post)
                     navController.navigate("editPost")
@@ -132,43 +140,37 @@ fun AsisHubScreen(
     }
 }
 
-
 // =============================================================
-// INPUT POST BOX (DENGAN LOGIKA KAMERA)
+// INPUT POST BOX (DIPERBAIKI DENGAN DATA DINAMIS)
 // =============================================================
 @Composable
 fun PostInputBox(
     onClickText: () -> Unit,
     onNavigateToCreatePost: () -> Unit,
-    vm: AsisHubViewModel // Terima ViewModel
+    vm: AsisHubViewModel,
+    profileImage: String? // 3. Tambahkan parameter profileImage di sini
 ) {
     val context = LocalContext.current
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Launcher untuk membuka kamera
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
             if (success) {
                 tempImageUri?.let {
-                    vm.onImageSelected(it) // Simpan URI ke ViewModel
-                    onNavigateToCreatePost() // Pindah ke CreatePostScreen
+                    vm.onImageSelected(it)
+                    onNavigateToCreatePost()
                 }
             }
         }
     )
 
-    // Launcher untuk meminta izin kamera
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Lakukan null-check sebelum memanggil launch
-            tempImageUri?.let { uri ->
-                cameraLauncher.launch(uri)
-            }
+            tempImageUri?.let { uri -> cameraLauncher.launch(uri) }
         }
-        // Jika tidak, tidak terjadi apa-apa (Anda bisa menambahkan pesan)
     }
 
     Row(
@@ -179,39 +181,45 @@ fun PostInputBox(
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        // 4. Gunakan AsyncImage dengan URL yang benar
+        AsyncImage(
+            model = if (!profileImage.isNullOrEmpty()) {
+                "http://10.0.2.2:3000$profileImage"
+            } else {
+                R.drawable.logo_asistalk_hijau
+            },
+            contentDescription = "My Profile",
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF3A57E8)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("Z", color = Color.White, fontWeight = FontWeight.Bold)
-        }
+                .background(Color.White),
+            contentScale = ContentScale.Crop,
+            error = painterResource(R.drawable.logo_asistalk_hijau)
+        )
+
         Spacer(modifier = Modifier.width(10.dp))
-        // Bagian teks yang bisa diklik
+
         Box(
             modifier = Modifier
                 .weight(1f)
                 .height(42.dp)
                 .background(Color(0xFFEAEAEA), RoundedCornerShape(20.dp))
-                .clickable { onClickText() } // Gunakan callback onClickText
+                .clickable { onClickText() }
                 .padding(start = 14.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Text("Apa yang ingin anda diskusikan?", color = Color.Gray)
         }
+
         Spacer(modifier = Modifier.width(10.dp))
-        // Ikon kamera yang bisa diklik
+
         Icon(
             painter = painterResource(R.drawable.ic_camera),
             contentDescription = "Camera",
             tint = Color(0xFF00BFA5),
-            modifier = Modifier.clickable { // Buat ikon bisa diklik
-                // 1. Buat file & URI untuk menyimpan gambar
+            modifier = Modifier.clickable {
                 val uri = ComposeFileProvider.getImageUri(context)
                 tempImageUri = uri
-                // 2. Minta izin kamera
                 permissionLauncher.launch(Manifest.permission.CAMERA)
             }
         )
@@ -219,7 +227,7 @@ fun PostInputBox(
 }
 
 // =============================================================
-// POST CARD (MENAMPILKAN GAMBAR JIKA ADA)
+// POST CARD (TETAP SAMA)
 // =============================================================
 @Composable
 fun PostCard(
@@ -237,36 +245,44 @@ fun PostCard(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // ... (Bagian header PostCard tidak berubah)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
+                AsyncImage(
+                    model = if (!post.authorProfileImage.isNullOrEmpty()) {
+                        "http://10.0.2.2:3000${post.authorProfileImage}"
+                    } else {
+                        R.drawable.logo_asistalk_hijau
+                    },
+                    contentDescription = "Author Profile",
                     modifier = Modifier
                         .size(45.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF3A57E8)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(post.author.first().toString(), color = Color.White, fontWeight = FontWeight.Bold)
-                }
+                        .background(Color.LightGray),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(R.drawable.logo_asistalk_hijau),
+                    error = painterResource(R.drawable.logo_asistalk_hijau)
+                )
+
                 Spacer(modifier = Modifier.width(10.dp))
+
                 Column {
                     Text(post.author, fontWeight = FontWeight.Bold)
                     Text(post.timestamp, fontSize = 12.sp, color = Color.Gray)
                 }
+
                 Spacer(modifier = Modifier.weight(1f))
+
                 DropdownMenuButton(
                     onEdit = onClickEdit,
                     onDelete = onClickDelete
                 )
             }
+
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Tampilkan teks konten jika ada
             if (post.content.isNotBlank()) {
                 Text(post.content, fontSize = 14.sp)
             }
 
-            // Tampilkan gambar jika ada URI-nya
             post.imageUri?.let { uri ->
                 Spacer(modifier = Modifier.height(14.dp))
                 Image(
@@ -280,11 +296,10 @@ fun PostCard(
                 )
             }
 
-            // ... (Bagian footer/komentar tidak berubah)
             Spacer(modifier = Modifier.height(10.dp))
             Divider(thickness = 1.dp, color = Color(0xFFEAEAEA))
             Text(
-                "${post.commentsCount} Comments",
+                "${post.comments.size} Comments",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
@@ -296,16 +311,11 @@ fun PostCard(
     }
 }
 
-
-// =============================================================
-// DROP DOWN MENU (Tidak ada perubahan)
-// =============================================================
 @Composable
 fun DropdownMenuButton(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    // ... Kode DropdownMenuButton Anda tidak perlu diubah
     var expanded by remember { mutableStateOf(false) }
 
     Box {
@@ -337,4 +347,3 @@ fun DropdownMenuButton(
         }
     }
 }
-

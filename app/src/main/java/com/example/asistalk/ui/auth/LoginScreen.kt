@@ -27,6 +27,7 @@ import com.example.asistalk.network.RetrofitClient
 import com.example.asistalk.utils.UserPreferencesRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.example.asistalk.utils.TokenManager
 
 @Composable
 fun LoginScreen(
@@ -181,11 +182,18 @@ fun LoginScreen(
 
                             // 1️⃣ LOGIN
                             val request = LoginRequest(username, password)
-                            val response = RetrofitClient.instance.loginUser(request)
+                            val api = RetrofitClient.getInstance(context)
+                            val response = api.loginUser(request)
 
                             if (response.success && response.token != null && response.user != null) {
 
+                                TokenManager.saveToken(
+                                    context = context,
+                                    token = response.token
+                                )
+
                                 userPrefsRepo.saveToken(response.token)
+                                userPrefsRepo.saveUserId(response.user.id)
 
                                 val profile = response.user
                                 val fullImageUrl =
