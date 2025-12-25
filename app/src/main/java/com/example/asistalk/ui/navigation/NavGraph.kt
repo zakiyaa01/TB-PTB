@@ -179,7 +179,6 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         }
     }
 }
-
 object Graph {
     const val AUTHENTICATION = "auth_graph"
     const val MAIN = "main_graph"

@@ -290,7 +290,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
         return name.ifEmpty { uri.path?.substringAfterLast('/') ?: "file" }
     }
-
     private fun uriToFile(uri: Uri, context: Context): File? {
         val file = File(context.cacheDir, "temp_${System.currentTimeMillis()}")
         return try {

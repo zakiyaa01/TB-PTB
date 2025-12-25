@@ -48,7 +48,6 @@ fun MaterialDetailScreen(
             if (!adjustedUrl.startsWith("http")) {
                 adjustedUrl = "http://10.0.2.2:3000/$adjustedUrl"
             }
-
             val uri = Uri.parse(adjustedUrl)
 
             val intent = when (fileType.uppercase()) {

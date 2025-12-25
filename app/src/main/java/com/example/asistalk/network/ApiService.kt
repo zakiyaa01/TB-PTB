@@ -82,7 +82,6 @@ interface ApiService {
     // =====================
     // ASISLEARN MATERIALS
     // =====================
-
     @GET("api/materials")
     suspend fun getAllMaterials(): MaterialResponse
 

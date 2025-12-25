@@ -27,6 +27,7 @@ fun NotificationAsisLearnScreen(navController: NavController) {
     val context = LocalContext.current
     val notifications = remember { NotificationHelper.getLogs(context) }
 
+
     Scaffold(
         topBar = {
             TopAppBar(

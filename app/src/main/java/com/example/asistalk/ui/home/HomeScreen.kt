@@ -269,7 +269,6 @@ fun RecentPostCard(data: PostData) {
         }
     }
 }
-
 @Composable
 fun LoadingIndicator() {
     Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) {

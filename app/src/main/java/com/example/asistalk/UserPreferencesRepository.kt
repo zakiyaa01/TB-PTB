@@ -128,7 +128,6 @@ class UserPreferencesRepository(private val context: Context) {
     val savedPasswordFlow: Flow<String> = context.dataStore.data.map {
         it[Keys.PASSWORD] ?: ""
     }
-
     // ===== LOGOUT =====
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }

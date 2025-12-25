@@ -161,7 +161,6 @@ fun EditMaterialScreen(
                     )
                 }
             }
-
             Spacer(Modifier.height(32.dp))
 
             if (isLoading) {
