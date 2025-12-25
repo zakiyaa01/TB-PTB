@@ -137,11 +137,14 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- FUNGSI CEK FILE LOKAL (Untuk Tab Download) ---
-    fun checkDownloadedMaterials(context: Context, allMaterials: List<MaterialItem>) {
+    // --- PERBAIKAN FUNGSI CEK FILE LOKAL ---
+    // Menggunakan data internal _allMaterials untuk menghindari loop dari UI
+    fun checkDownloadedMaterials(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
+            val currentAllData = _allMaterials.value
             val downloadedSet = mutableSetOf<Int>()
-            allMaterials.forEach { item ->
+
+            currentAllData.forEach { item ->
                 val fileName = "${item.subject.replace(" ", "_")}.pdf"
                 val file = File(
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
@@ -151,8 +154,11 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                     downloadedSet.add(item.id)
                 }
             }
-            _downloadedIds.value = downloadedSet
+
+            // Update state di Main Thread setelah pengecekan selesai
             withContext(Dispatchers.Main) {
+                _downloadedIds.value = downloadedSet
+                // Segera panggil filter agar tab Download terisi tanpa kedip
                 filterMaterials()
             }
         }
@@ -182,7 +188,7 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _currentFileName.value = item.file_path.substringAfterLast("/")
     }
 
-    // --- UPLOAD & UPDATE MATERIAL (Perbaikan file path) ---
+    // --- UPLOAD & UPDATE MATERIAL ---
     fun uploadMaterial(context: Context) {
         val uri = _selectedFileUri.value ?: return
         viewModelScope.launch {

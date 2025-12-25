@@ -52,20 +52,21 @@ fun AsisLearnScreen(
         viewModel.fetchAllMaterials()
     }
 
-    // Filter reaktif & Cek Download jika tab Download diklik
-    LaunchedEffect(selectedTab, searchQuery, materials) {
+    // PERBAIKAN: Filter reaktif & Cek Download
+    // Menghapus 'materials' dari daftar pengamat agar tidak terjadi infinite loop
+    LaunchedEffect(selectedTab, searchQuery) {
         viewModel.selectedTabIndex = selectedTab
         viewModel.searchQuery = searchQuery
 
         if (selectedTab == 2) {
-            viewModel.checkDownloadedMaterials(context, materials)
+            // Memanggil versi tanpa parameter 'materials' sesuai perbaikan ViewModel
+            viewModel.checkDownloadedMaterials(context)
+        } else {
+            viewModel.filterMaterials()
         }
-
-        viewModel.filterMaterials()
     }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
-        // Menggunakan LazyColumn sebagai kontainer utama agar header bisa ikut ter-scroll
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
