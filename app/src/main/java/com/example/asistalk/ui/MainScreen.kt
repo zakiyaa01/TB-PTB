@@ -28,7 +28,7 @@ import com.example.asistalk.ui.navigation.mainNavGraph
 data class BottomNavItem(val label: String, val icon: Int, val route: String)
 
 @Composable
-fun MainScreen() {
+fun MainScreen(token: String) {
     val mainNavController = rememberNavController()
 
     Scaffold(

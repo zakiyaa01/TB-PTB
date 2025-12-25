@@ -44,7 +44,7 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var birthDate by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("Male") }
     var password by remember { mutableStateOf("") }
     var profileImageUri by remember { mutableStateOf<Uri?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -154,14 +154,36 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = gender,
-                onValueChange = { gender = it },
-                label = { Text("Jenis Kelamin (L / P)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
             Spacer(modifier = Modifier.height(12.dp))
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Jenis Kelamin",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    RadioButton(
+                        selected = gender == "Male",
+                        onClick = { gender = "Male" },
+                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF00BFA6))
+                    )
+                    Text("Male", modifier = Modifier.clickable { gender = "Male" })
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
+                    RadioButton(
+                        selected = gender == "Female",
+                        onClick = { gender = "Female" },
+                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF00BFA6))
+                    )
+                    Text("Female", modifier = Modifier.clickable { gender = "Female" })
+                }
+            }
 
             OutlinedTextField(
                 value = password,

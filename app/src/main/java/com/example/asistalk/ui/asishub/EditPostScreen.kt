@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.asistalk.R
 
@@ -36,12 +37,9 @@ fun EditPostScreen(
     navController: NavHostController,
     vm: AsisHubViewModel
 ) {
-    // Ambil data post yang sedang diedit dari ViewModel
     val postToEdit by vm.postToEdit.collectAsState()
     val selectedImageUri by vm.selectedImageUri.collectAsState()
 
-    // State untuk menampung teks yang diedit.
-    // `LaunchedEffect` digunakan untuk mengisi state ini saat layar pertama kali dibuka.
     var postContent by remember { mutableStateOf("") }
 
     LaunchedEffect(postToEdit) {
@@ -50,7 +48,6 @@ fun EditPostScreen(
         }
     }
 
-    // Launcher untuk memilih gambar dari galeri
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -63,7 +60,7 @@ fun EditPostScreen(
                 title = { Text("Edit Postingan") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        vm.clearEditingState() // Bersihkan state sebelum kembali
+                        vm.clearEditingState()
                         navController.popBackStack()
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali")
@@ -72,15 +69,12 @@ fun EditPostScreen(
                 actions = {
                     Button(
                         onClick = {
-                            // Panggil fungsi update di ViewModel
                             vm.updatePost(
                                 updatedContent = postContent,
                                 newImageUri = selectedImageUri
                             )
-                            // Kembali ke AsisHubScreen
                             navController.popBackStack()
                         },
-                        // Tombol hanya aktif jika post yang diedit ada
                         enabled = postToEdit != null
                     ) {
                         Text("Simpan")
@@ -95,34 +89,30 @@ fun EditPostScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            // Header Info Pengguna (mirip PostCard)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
+                AsyncImage(
+                    model = "http://10.0.2.2:3000${postToEdit?.authorProfileImage}",
+                    contentDescription = "Profile",
                     modifier = Modifier
                         .size(45.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF3A57E8)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = postToEdit?.author?.firstOrNull()?.toString() ?: "U",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                        .background(Color.LightGray),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.logo_asistalk_hijau)
+                )
+
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(postToEdit?.author ?: "User", fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Text Field untuk mengedit konten
             TextField(
                 value = postContent,
                 onValueChange = { postContent = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f), // Memenuhi sisa ruang
+                    .weight(1f),
                 placeholder = { Text("Apa yang ingin anda diskusikan?") },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
@@ -132,8 +122,10 @@ fun EditPostScreen(
                 )
             )
 
-            // Pratinjau Gambar yang Terpilih
-            selectedImageUri?.let { uri ->
+            // Perbaikan Logika Preview Gambar
+            val previewImage = selectedImageUri ?: postToEdit?.imageUri
+
+            previewImage?.let { uri ->
                 Box(modifier = Modifier.padding(top = 8.dp)) {
                     Image(
                         painter = rememberAsyncImagePainter(uri),
@@ -144,7 +136,6 @@ fun EditPostScreen(
                             .clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop
                     )
-                    // Tombol 'X' untuk menghapus gambar
                     IconButton(
                         onClick = { vm.clearSelectedImage() },
                         modifier = Modifier
@@ -159,7 +150,6 @@ fun EditPostScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Aksi Tambah Gambar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -175,8 +165,7 @@ fun EditPostScreen(
                     modifier = Modifier
                         .size(28.dp)
                         .clickable { galleryLauncher.launch("image/*") },
-
-                    tint = LocalContentColor.current // Memberi warna default yang sesuai tema
+                    tint = LocalContentColor.current
                 )
             }
         }

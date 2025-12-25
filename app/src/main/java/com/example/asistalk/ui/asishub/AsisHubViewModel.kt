@@ -1,149 +1,66 @@
 package com.example.asistalk.ui.asishub
 
+import android.app.Application
 import android.net.Uri
-import androidx.lifecycle.ViewModel
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.asistalk.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
-// =======================================================================
-// Perubahan #1: Tambahkan data class untuk Comment
-// =======================================================================
+// =======================
+// DATA CLASS
+// =======================
+
 data class Comment(
     val id: String,
     val author: String,
+    val profileImage: String? = null,
     val content: String,
     val timestamp: String
 )
 
-// =======================================================================
-// Perubahan #2: Modifikasi data class Post
-// =======================================================================
 data class Post(
     val id: Int,
     val author: String,
+    val authorProfileImage: String? = null,
     val timestamp: String,
     val content: String,
     val imageUri: Uri? = null,
-    // Hapus 'commentsCount', ganti dengan list 'comments'
     val comments: List<Comment> = emptyList()
-) {
-    // Properti ini akan menghitung jumlah komentar secara otomatis
-    val commentsCount: Int
-        get() = comments.size
-}
+)
 
+// =======================
+// VIEWMODEL
+// =======================
 
-// Buat ViewModel untuk mengelola daftar post
-class AsisHubViewModel : ViewModel() {
+class AsisHubViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val repository = AsisHubRepository(
+        api = RetrofitClient.getInstance(getApplication()),
+        context = getApplication()
+    )
 
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
-    val posts: StateFlow<List<Post>> = _posts.asStateFlow()
-
-    // State untuk menyimpan URI gambar yang dipilih sementara (Tidak ada perubahan)
-    private val _selectedImageUri = MutableStateFlow<Uri?>(null)
-    val selectedImageUri: StateFlow<Uri?> = _selectedImageUri.asStateFlow()
-
-    // State untuk menampung post yang sedang diedit (Tidak ada perubahan)
+    val posts: StateFlow<List<Post>> = _posts
     private val _postToEdit = MutableStateFlow<Post?>(null)
-    val postToEdit: StateFlow<Post?> = _postToEdit.asStateFlow()
-
-    // =======================================================================
-    // Perubahan #3: Tambahkan state dan fungsi baru untuk fitur komentar
-    // =======================================================================
-
-    // State untuk menyimpan post yang akan ditampilkan di halaman detail
+    val postToEdit: StateFlow<Post?> = _postToEdit
+    private val _selectedImageUri = MutableStateFlow<Uri?>(null)
+    val selectedImageUri: StateFlow<Uri?> = _selectedImageUri
     private val _postToView = MutableStateFlow<Post?>(null)
     val postToView: StateFlow<Post?> = _postToView
+    private val _currentUserProfile = MutableStateFlow<String?>(null)
+    val currentUserProfile: StateFlow<String?> = _currentUserProfile
+    // =======================
+    // IMAGE
+    // =======================
 
-    /**
-     * Menyiapkan post yang akan dilihat detail dan komentarnya.
-     * Dipanggil dari AsisHubScreen sebelum navigasi ke PostDetailScreen.
-     */
-    fun selectPostForViewing(post: Post) {
-        _postToView.value = post
-    }
-
-    /**
-     * Menambahkan komentar baru ke sebuah post.
-     * Dipanggil dari PostDetailScreen saat tombol kirim ditekan.
-     */
-    fun addComment(postId: Int, commentContent: String) {
-        // Cari post di daftar _posts dan tambahkan komentar baru
-        _posts.update { currentPosts ->
-            currentPosts.map { post ->
-                if (post.id == postId) {
-                    val newComment = Comment(
-                        id = "comment_${System.currentTimeMillis()}",
-                        author = "Zakiya Aulia", // Nanti bisa diganti dengan user yang login
-                        content = commentContent,
-                        timestamp = "Just now"
-                    )
-                    // Salin post lama, lalu tambahkan komentar baru ke daftarnya
-                    post.copy(comments = post.comments + newComment)
-                } else {
-                    post // Biarkan post lain apa adanya
-                }
-            }
-        }
-        // Update juga post yang sedang ditampilkan di halaman detail agar UI langsung refresh
-        _postToView.value = _posts.value.find { it.id == postId }
-    }
-
-// =======================================================================
-// Perubahan #4: Tambahkan fungsi untuk mengelola komentar
-// =======================================================================
-
-    /**
-     * Menghapus sebuah komentar dari sebuah post.
-     */
-    fun deleteComment(postId: Int, commentId: String) {
-        _posts.update { currentPosts ->
-            currentPosts.map { post ->
-                if (post.id == postId) {
-                    // Buat daftar komentar baru tanpa komentar yang akan dihapus
-                    val updatedComments = post.comments.filterNot { it.id == commentId }
-                    post.copy(comments = updatedComments)
-                } else {
-                    post
-                }
-            }
-        }
-        // Perbarui juga post yang sedang dilihat agar UI langsung refresh
-        _postToView.value = _posts.value.find { it.id == postId }
-    }
-
-    /**
-     * Mengedit konten dari sebuah komentar.
-     */
-    fun updateComment(postId: Int, commentId: String, newContent: String) {
-        _posts.update { currentPosts ->
-            currentPosts.map { post ->
-                if (post.id == postId) {
-                    // Cari komentar yang akan diedit dan perbarui kontennya
-                    val updatedComments = post.comments.map { comment ->
-                        if (comment.id == commentId) {
-                            comment.copy(content = newContent) // Perbarui kontennya
-                        } else {
-                            comment
-                        }
-                    }
-                    post.copy(comments = updatedComments)
-                } else {
-                    post
-                }
-            }
-        }
-        // Perbarui juga post yang sedang dilihat
-        _postToView.value = _posts.value.find { it.id == postId }
-    }
-
-    // =======================================================================
-    // Di bawah ini adalah kode Anda yang sudah ada sebelumnya (Tidak ada perubahan)
-    // =======================================================================
-
-    // FUNGSI UNTUK GAMBAR
     fun onImageSelected(uri: Uri?) {
         _selectedImageUri.value = uri
     }
@@ -152,52 +69,203 @@ class AsisHubViewModel : ViewModel() {
         _selectedImageUri.value = null
     }
 
-    // FUNGSI CRUD UNTUK POST
-    private var postIdCounter = 0
+    // =======================
+    // CREATE POST (DATABASE REAL)
+    // =======================
 
-    fun addPost(author: String, content: String, imageUri: Uri?) {
-        val newPost = Post(
-            id = postIdCounter++,
-            author = author,
-            timestamp = "Just now",
-            content = content,
-            imageUri = imageUri
-        )
-        _posts.update { currentPosts -> listOf(newPost) + currentPosts }
-        clearSelectedImage()
+    fun createPost(content: String, imageUri: Uri?) {
+        viewModelScope.launch {
+            try {
+                val imagePart: MultipartBody.Part? =
+                    imageUri?.let { repository.prepareImagePart(it) }
+
+                val response = repository.createPost(
+                    content = content.toRequestBody("text/plain".toMediaType()),
+                    media = imagePart
+                )
+
+                val postFromApi = response.post
+
+                val newPost = Post(
+                    id = postFromApi.id,
+                    author = postFromApi.username,
+                    // 1️⃣ PERBAIKAN TANGGAL DISINI
+                    timestamp = postFromApi.created_at.split("T")[0],
+                    content = postFromApi.content,
+                    imageUri = postFromApi.media?.let { Uri.parse(it) },
+                    comments = emptyList()
+                )
+
+                _posts.value = listOf(newPost) + _posts.value
+                clearSelectedImage()
+
+            } catch (e: Exception) {
+                Log.e("CREATE_POST", e.message ?: "Create post failed")
+            }
+        }
+    }
+
+    // =======================
+    // POST DETAIL + COMMENT
+    // =======================
+
+    fun selectPostForViewing(post: Post) {
+        _postToView.value = post
+        loadComments(post.id)
+    }
+
+    fun addComment(postId: Int, content: String) {
+        viewModelScope.launch {
+            try {
+                repository.createComment(
+                    postId = postId,
+                    comment = content
+                )
+                // REFRESH: Ambil data komentar terbaru dari database agar muncul di UI
+                loadComments(postId)
+            } catch (e: Exception) {
+                Log.e("ADD_COMMENT", e.message ?: "Gagal")
+            }
+        }
+    }
+
+    fun loadComments(postId: Int) {
+        viewModelScope.launch {
+            try {
+                val comments = repository.getComments(postId)
+                val mapped = comments.map {
+                    Comment(
+                        id = it.id.toString(),
+                        author = it.username,
+                        profileImage = it.profile_image,
+                        content = it.comment,
+                        timestamp = it.created_at.split("T")[0]
+                    )
+                }
+
+                // Update list post utama
+                _posts.update { list ->
+                    list.map { p -> if (p.id == postId) p.copy(comments = mapped) else p }
+                }
+
+                // REFRESH DETAIL: Pastikan layar detail mendapatkan list komentar terbaru
+                _postToView.value = _posts.value.find { it.id == postId }
+
+            } catch (e: Exception) {
+                Log.e("LOAD_COMMENT", "${e.message}")
+            }
+        }
+    }
+
+    fun updateComment(postId: Int, commentId: String, newText: String) {
+        viewModelScope.launch {
+            try {
+                repository.updateComment(commentId = commentId, content = newText)
+                loadComments(postId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun deleteComment(postId: Int, commentId: String) {
+        viewModelScope.launch {
+            try {
+                repository.deleteComment(commentId = commentId)
+                loadComments(postId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun selectPostForEditing(post: Post) {
+        _postToEdit.value = post
     }
 
     fun deletePost(postId: Int) {
-        _posts.update { currentPosts -> currentPosts.filterNot { it.id == postId } }
-    }
+        viewModelScope.launch {
+            try {
+                repository.deletePost(postId)
 
-    // FUNGSI UNTUK EDIT POST
-    fun selectPostForEditing(post: Post) {
-        _postToEdit.value = post
-        onImageSelected(post.imageUri)
-    }
-
-    fun updatePost(updatedContent: String, newImageUri: Uri?) {
-        val originalPost = _postToEdit.value ?: return
-        val updatedPost = originalPost.copy(
-            content = updatedContent,
-            imageUri = newImageUri,
-            timestamp = "Edited"
-        )
-        _posts.update { currentPosts ->
-            currentPosts.map { post ->
-                if (post.id == originalPost.id) {
-                    updatedPost
-                } else {
-                    post
+                _posts.update { list ->
+                    list.filterNot { it.id == postId }
                 }
+
+                if (_postToView.value?.id == postId) {
+                    _postToView.value = null
+                }
+            } catch (e: Exception) {
+                Log.e("DELETE_POST", "Gagal menghapus: ${e.message}")
             }
         }
-        clearEditingState()
     }
 
     fun clearEditingState() {
         _postToEdit.value = null
         clearSelectedImage()
+    }
+
+    fun updatePost(updatedContent: String, newImageUri: Uri?) {
+        val post = _postToEdit.value ?: return
+        viewModelScope.launch {
+            try {
+                // 1. Kirim update ke API
+                repository.updatePost(
+                    postId = post.id,
+                    content = updatedContent.toRequestBody("text/plain".toMediaType()),
+                    media = null
+                )
+
+                // 2. Update list lokal secara instan agar UI tidak delay
+                _posts.update { list ->
+                    list.map {
+                        if (it.id == post.id) it.copy(content = updatedContent, imageUri = newImageUri)
+                        else it
+                    }
+                }
+
+                // 3. Update view detail langsung dari data yang baru saja diubah
+                _postToView.value = _posts.value.find { it.id == post.id }
+
+                // 4. Baru panggil fetchPosts untuk memastikan sinkronisasi dengan database
+                fetchPosts()
+
+                clearEditingState()
+            } catch (e: Exception) {
+                Log.e("UPDATE_ERROR", "${e.message}")
+            }
+        }
+    }
+
+    fun fetchPosts() {
+        viewModelScope.launch {
+            try {
+                val response = repository.getPosts()
+                if (response.isNotEmpty()) {
+                    _currentUserProfile.value = response.firstOrNull()?.profile_image
+                }
+
+                val mappedPosts = response.map {
+                    Post(
+                        id = it.id,
+                        author = it.username,
+                        authorProfileImage = it.profile_image,
+                        // 3️⃣ PERBAIKAN TANGGAL DISINI
+                        timestamp = it.created_at.split("T")[0],
+                        content = it.content,
+                        imageUri = it.media?.let { media ->
+                            Uri.parse(RetrofitClient.BASE_IMAGE_URL + media)
+                        },
+                        comments = emptyList()
+                    )
+                }
+
+                _posts.value = mappedPosts
+
+            } catch (e: Exception) {
+                Log.e("FETCH_POSTS", e.message ?: "Failed fetch posts")
+            }
+        }
     }
 }
