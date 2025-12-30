@@ -35,22 +35,20 @@ import kotlinx.coroutines.flow.first
 @Composable
 fun HomeScreen(
     navController: NavController,
-    asisLearnVm: AsisLearnViewModel, // Untuk fitur materi (Suci)
-    asisHubVm: AsisHubViewModel      // Untuk fitur diskusi (Zakiya)
+    asisLearnVm: AsisLearnViewModel,
+    asisHubVm: AsisHubViewModel
 ) {
     val context = LocalContext.current
     val userPrefsRepo = remember { UserPreferencesRepository(context) }
 
-    // State dari AsisLearn
     val materials by asisLearnVm.materials.collectAsState()
     val isLearnLoading by asisLearnVm.isLoading.collectAsState()
 
-    // State dari AsisHub
     val posts by asisHubVm.posts.collectAsState()
 
     val fullName = asisLearnVm.currentUserFullName
     val displayName = remember(fullName) {
-        if (fullName.isNotBlank()) fullName.split(" ").first() else "Mahasiswa"
+        if (fullName.isNotBlank()) fullName.split(" ").first() else "Asisten"
     }
 
     LaunchedEffect(Unit) {
@@ -71,7 +69,6 @@ fun HomeScreen(
                 .padding(padding),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
-            // 1. HEADER & WELCOME CARD
             item { HeaderSection() }
             item {
                 WelcomeCard(
@@ -81,7 +78,6 @@ fun HomeScreen(
                 )
             }
 
-            // 2. MATERI TERBARU
             item {
                 SectionHeader(
                     title = "Materi Terbaru",
@@ -100,7 +96,6 @@ fun HomeScreen(
                 }
             }
 
-            // 3. POSTINGAN TERBARU
             item {
                 Spacer(Modifier.height(16.dp))
                 SectionHeader(
@@ -129,8 +124,6 @@ fun HomeScreen(
         }
     }
 }
-
-// --- KOMPONEN UI ---
 
 @Composable
 fun HeaderSection() {

@@ -83,10 +83,7 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
         modifier = modifier
     ) {
         composable("home") {
-            // Memanggil ViewModel Suci (Materi & Sesi)
             val asisLearnViewModel: AsisLearnViewModel = viewModel()
-
-            // Memanggil ViewModel Zakiya (Diskusi/AsisTalk)
             val asisHubViewModel: AsisHubViewModel = viewModel()
 
             HomeScreen(
@@ -120,8 +117,6 @@ fun mainNavGraph(navController: NavHostController, modifier: Modifier = Modifier
                     navController.getBackStackEntry("asislearn")
                 }
                 val vm: AsisLearnViewModel = viewModel(parentEntry)
-
-                // ✅ PERBAIKAN: Parameter token dihapus karena sudah dihandle AuthInterceptor
                 UploadMaterialScreen(
                     navController = navController,
                     viewModel = vm

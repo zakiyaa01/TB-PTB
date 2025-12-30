@@ -36,7 +36,6 @@ fun MaterialDetailScreen(
     val context = LocalContext.current
     val material by viewModel.selectedMaterial.collectAsState()
 
-    // Ambil detail materi dari list
     LaunchedEffect(materialId) {
         viewModel.getDetailFromList(materialId)
     }
@@ -103,7 +102,7 @@ fun MaterialDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .background(Color(0xFFF8FAFC))
             ) {
-                // --- HEADER ---
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -148,7 +147,7 @@ fun MaterialDetailScreen(
                     }
                 }
 
-                // --- CONTENT CARD ---
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -177,7 +176,7 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(24.dp))
 
-                        // INFO PENGUNGGAH
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -195,7 +194,7 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(32.dp))
 
-                        // LIHAT
+
                         Button(
                             onClick = { openFile(item.file_path, item.file_type) },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -209,7 +208,7 @@ fun MaterialDetailScreen(
 
                         Spacer(Modifier.height(12.dp))
 
-                        // DOWNLOAD
+
                         OutlinedButton(
                             onClick = {
                                 viewModel.downloadMaterial(

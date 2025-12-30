@@ -170,7 +170,6 @@ fun EditMaterialScreen(
             } else {
                 Button(
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                    // Validasi
                     enabled = subject.isNotBlank() && topic.isNotBlank(),
                     onClick = {
                         viewModel.updateMaterial(context)
