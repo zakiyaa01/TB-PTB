@@ -12,9 +12,6 @@ import retrofit2.http.DELETE
 import retrofit2.http.Part
 import retrofit2.http.Path
 
-// =====================
-// LOGIN
-// =====================
 data class LoginRequest(
     val username: String,
     val password: String
@@ -24,16 +21,12 @@ data class LoginResponse(
     val token: String,
     val user: UserProfile
 )
-// =====================
-// REGISTER
-// =====================
+
 data class RegisterResponse(
     val success: Boolean,
     val message: String
 )
-// =====================
-// PROFILE
-// =====================
+
 data class ProfileResponse(
     val success: Boolean,
     val user: UserProfile
@@ -70,10 +63,6 @@ data class MaterialItem(
     val author_name: String,
     val profile_image: String?
 )
-
-// =====================
-// ASISHUB - POSTS
-// =====================
 data class CreatePostResponse(
     val success: Boolean,
     val post: PostResponse
@@ -88,9 +77,7 @@ data class PostResponse(
     val username: String,
     val profile_image: String?
 )
-// =====================
-// ASISHUB - COMMENT
-// =====================
+
 data class CreateCommentRequest(
     val post_id: Int,
     val comment: String
@@ -102,10 +89,6 @@ data class CommentResponse(
     val username: String,
     val profile_image: String?
 )
-
-// =====================
-// API SERVICE
-// =====================
 interface ApiService {
     @POST("api/auth/login")
     suspend fun loginUser(
@@ -128,9 +111,6 @@ interface ApiService {
     @GET("api/auth/profile/{id}")
     suspend fun getProfile(@Path("id") id: Int): ProfileResponse
 
-    // =====================
-    // ASISLEARN MATERIALS
-    // =====================
     @GET("api/materials")
     suspend fun getAllMaterials(): MaterialResponse
 
@@ -160,9 +140,6 @@ interface ApiService {
         @Path("id") id: Int
     ): CommonResponse
 
-    // =====================
-    // POSTS
-    // =====================
     @Multipart
     @POST("api/posts")
     suspend fun createPost(
@@ -186,9 +163,6 @@ interface ApiService {
         @Path("id") id: String
     )
 
-    // =====================
-    // COMMENTS
-    // =====================
     @POST("api/comments")
     suspend fun createComment(
         @Body body: CreateCommentRequest

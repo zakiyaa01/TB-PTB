@@ -35,16 +35,12 @@ import com.example.asistalk.network.RetrofitClient
 import com.example.asistalk.ui.asishub.components.DeleteConfirmationDialog
 import com.example.asistalk.utils.ComposeFileProvider
 
-// =============================================================
-// MAIN SCREEN – ASISHUB
-// =============================================================
 @Composable
 fun AsisHubScreen(
     navController: NavHostController,
     vm: AsisHubViewModel
 ) {
     val posts by vm.posts.collectAsState()
-    // 1. Ambil state foto profil user yang sedang login dari ViewModel
     val myProfileImage by vm.currentUserProfile.collectAsState()
 
     var postToDelete by remember { mutableStateOf<Post?>(null) }
@@ -71,7 +67,6 @@ fun AsisHubScreen(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- HEADER ---
         item {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -104,7 +99,6 @@ fun AsisHubScreen(
             Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
         }
 
-        // --- INPUT BOX ---
         item {
             PostInputBox(
                 onClickText = {
@@ -115,12 +109,10 @@ fun AsisHubScreen(
                     navController.navigate("createPost")
                 },
                 vm = vm,
-                // 2. Teruskan data profil ke PostInputBox
                 profileImage = myProfileImage
             )
         }
 
-        // --- POST LIST ---
         items(posts, key = { it.id }) { post ->
             PostCard(
                 post = post,
@@ -140,15 +132,12 @@ fun AsisHubScreen(
     }
 }
 
-// =============================================================
-// INPUT POST BOX (DIPERBAIKI DENGAN DATA DINAMIS)
-// =============================================================
 @Composable
 fun PostInputBox(
     onClickText: () -> Unit,
     onNavigateToCreatePost: () -> Unit,
     vm: AsisHubViewModel,
-    profileImage: String? // 3. Tambahkan parameter profileImage di sini
+    profileImage: String?
 ) {
     val context = LocalContext.current
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -181,7 +170,6 @@ fun PostInputBox(
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 4. Gunakan AsyncImage dengan URL yang benar
         AsyncImage(
             model = if (!profileImage.isNullOrEmpty()) {
                 "http://10.0.2.2:3000$profileImage"
@@ -226,9 +214,6 @@ fun PostInputBox(
     }
 }
 
-// =============================================================
-// POST CARD (TETAP SAMA)
-// =============================================================
 @Composable
 fun PostCard(
     post: Post,

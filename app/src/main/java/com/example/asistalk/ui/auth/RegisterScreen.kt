@@ -275,10 +275,6 @@ fun RegisterScreen(
     }
 }
 
-/**
- * 🔥 HELPER WAJIB
- * Convert content:// Uri → File (AMAN UNTUK ANDROID MODERN)
- */
 fun getFileFromUri(context: Context, uri: Uri): File {
     val inputStream = context.contentResolver.openInputStream(uri)
         ?: throw IllegalArgumentException("Tidak bisa membuka file")

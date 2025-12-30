@@ -81,8 +81,6 @@ class ProfileViewModel(
         uiState = uiState.copy(toastMessage = null)
     }
 
-    // 🔥 INI YANG DIPERBAIKI (TANPA MERUSAK)
-    // 🔥 VERSI FINAL FETCH PROFILE
     fun fetchProfile(userId: Int) {
         viewModelScope.launch {
             try {
@@ -91,12 +89,8 @@ class ProfileViewModel(
                 val response = repository.getProfile(userId)
                 val profile = response.user
 
-                // 1️⃣ URL Gambar dengan Base URL
                 val baseUrl = "http://10.0.2.2:3000"
                 val fullImageUrl = "$baseUrl${profile.profile_image}"
-
-                // 2️⃣ Perbaikan Format Tanggal (Birth Date)
-                // Kita ambil 10 karakter pertama (YYYY-MM-DD) jika mengandung huruf 'T'
                 val formattedDate = if (profile.birth_date.contains("T")) {
                     profile.birth_date.substring(0, 10)
                 } else {
@@ -107,10 +101,10 @@ class ProfileViewModel(
                     fullName = profile.full_name,
                     email = profile.email,
                     phone = profile.phone_number,
-                    birthDate = formattedDate, // <--- Tanggal sudah rapi (YYYY-MM-DD)
+                    birthDate = formattedDate,
                     gender = profile.gender,
                     labAccount = profile.username,
-                    profileImageUri = Uri.parse(fullImageUrl), // <--- URL Gambar Lengkap
+                    profileImageUri = Uri.parse(fullImageUrl),
                     isLoading = false
                 )
 

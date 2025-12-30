@@ -39,7 +39,6 @@ fun CreatePostScreen(
         imageUri = selectedImageUri
     }
 
-    // ===== GALERI =====
     val pickMediaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
@@ -50,7 +49,6 @@ fun CreatePostScreen(
         }
     )
 
-    // ===== KAMERA =====
     val takePhotoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { }
@@ -88,7 +86,6 @@ fun CreatePostScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // ===== PREVIEW IMAGE =====
         imageUri?.let { uri ->
             Image(
                 painter = rememberAsyncImagePainter(uri),
@@ -138,7 +135,6 @@ fun CreatePostScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // ===== POST BUTTON =====
         Button(
             onClick = {
                 vm.createPost(

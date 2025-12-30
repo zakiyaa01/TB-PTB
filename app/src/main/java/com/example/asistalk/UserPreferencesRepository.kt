@@ -7,12 +7,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-// SINGLE DataStore instance
 private val Context.dataStore by preferencesDataStore(name = "user_prefs")
 
 class UserPreferencesRepository(private val context: Context) {
 
-    // ===== KEYS =====
     private object Keys {
         val USER_ID = intPreferencesKey("user_id")
         val USERNAME = stringPreferencesKey("username")
@@ -24,10 +22,8 @@ class UserPreferencesRepository(private val context: Context) {
         val PROFILE_IMAGE = stringPreferencesKey("profile_image")
         val PASSWORD = stringPreferencesKey("password")
         val REMEMBER_ME = booleanPreferencesKey("remember_me")
-        // Token tidak lagi disimpan di DataStore agar sinkron dengan AuthInterceptor
     }
 
-    // ===== LOGIN CREDENTIALS =====
     suspend fun saveLoginCredentials(
         username: String,
         password: String,
@@ -46,8 +42,6 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
-    // ===== TOKEN (DIALIKKAN KE TOKENMANAGER) =====
-    // Perbaikan: Simpan ke SharedPreferences agar terbaca oleh Interceptor
     fun saveToken(token: String) {
         TokenManager.saveToken(context, token)
     }
@@ -56,7 +50,6 @@ class UserPreferencesRepository(private val context: Context) {
         return TokenManager.getToken(context) ?: ""
     }
 
-    // ===== USER PROFILE (LENGKAP) =====
     suspend fun saveFullProfile(
         fullName: String,
         username: String,
@@ -77,14 +70,12 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
-    // Tambahan fungsi untuk simpan ID saja jika diperlukan terpisah
     suspend fun saveUserId(userId: Int) {
         context.dataStore.edit { prefs ->
             prefs[Keys.USER_ID] = userId
         }
     }
     private val USER_ID = intPreferencesKey("user_id")
-    // ===== FLOWS (DIBACA UI & VIEWMODEL) =====
     val userIdFlow: Flow<Int> = context.dataStore.data.map {
         it[Keys.USER_ID] ?: -1
     }
@@ -128,9 +119,8 @@ class UserPreferencesRepository(private val context: Context) {
     val savedPasswordFlow: Flow<String> = context.dataStore.data.map {
         it[Keys.PASSWORD] ?: ""
     }
-    // ===== LOGOUT =====
     suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
-        TokenManager.clearToken(context) // Hapus token juga
+        TokenManager.clearToken(context)
     }
 }

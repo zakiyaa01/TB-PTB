@@ -24,7 +24,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.asistalk.R
 import com.example.asistalk.ui.navigation.mainNavGraph
 
-// Data class untuk item navigasi
 data class BottomNavItem(val label: String, val icon: Int, val route: String)
 
 @Composable
@@ -57,16 +56,12 @@ fun BottomNavigationBar(navController: NavController) {
         items.forEach { item ->
             val isSelected = currentRoute == item.route
 
-            // --- PERUBAHAN ANIMASI DIMULAI DI SINI ---
-
-            // 1. Animasi untuk skala (membesar saat dipilih)
             val scale by animateFloatAsState(
                 targetValue = if (isSelected) 1.2f else 1.0f,
                 animationSpec = tween(durationMillis = 300),
                 label = "scale"
             )
 
-            // 2. Animasi untuk posisi Y (naik sedikit saat dipilih)
             val offsetY by animateFloatAsState(
                 targetValue = if (isSelected) -10f else 0f,
                 animationSpec = tween(durationMillis = 300),
@@ -82,14 +77,13 @@ fun BottomNavigationBar(navController: NavController) {
                         restoreState = true
                     }
                 },
-                // 3. Terapkan animasi pada Ikon
                 icon = {
                     Icon(
                         painter = painterResource(id = item.icon),
                         contentDescription = item.label,
                         modifier = Modifier
-                            .scale(scale) // Terapkan skala
-                            .offset { IntOffset(0, offsetY.toInt()) } // Terapkan posisi Y
+                            .scale(scale)
+                            .offset { IntOffset(0, offsetY.toInt()) }
                     )
                 },
                 label = { Text(item.label) },
@@ -98,7 +92,7 @@ fun BottomNavigationBar(navController: NavController) {
                     unselectedIconColor = Color.White.copy(alpha = 0.6f),
                     selectedTextColor = Color.White,
                     unselectedTextColor = Color.White.copy(alpha = 0.6f),
-                    indicatorColor = Color.Transparent // Kita buat transparan agar tidak mengganggu
+                    indicatorColor = Color.Transparent
                 )
             )
         }

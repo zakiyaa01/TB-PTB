@@ -45,14 +45,11 @@ fun ProfileScreen(
     val localProfileImageUrl by userPrefs.profileImageFlow.collectAsState("")
 
     LaunchedEffect(Unit) {
-        // 1. Ambil userId dari DataStore
         val userId = userPrefs.userIdFlow.first()
 
-        // Jika ID valid (bukan -1), ambil dari API
         if (userId != -1) {
             profileViewModel.fetchProfile(userId)
         } else {
-            // Fallback: Ambil data lokal jika internet/ID bermasalah
             val fullname = userPrefs.fullnameFlow.first()
             val username = userPrefs.usernameFlow.first()
             val email = userPrefs.emailFlow.first()
@@ -78,7 +75,6 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 🔥 PERBAIKAN LOGIKA GAMBAR
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(
@@ -88,10 +84,10 @@ fun ProfileScreen(
                         else -> R.drawable.logo_asistalk_hijau
                     }
                 )
-                .crossfade(true) // Menambahkan efek transisi halus
-                .crossfade(500)  // Durasi transisi 500ms
-                .placeholder(R.drawable.logo_asistalk_hijau) // Gambar saat loading
-                .error(R.drawable.logo_asistalk_hijau)       // Gambar jika URL rusak
+                .crossfade(true)
+                .crossfade(500)
+                .placeholder(R.drawable.logo_asistalk_hijau)
+                .error(R.drawable.logo_asistalk_hijau)
                 .build(),
             contentDescription = "Profile Image",
             modifier = Modifier
@@ -102,14 +98,12 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Menampilkan Nama dari UI State (Hasil API)
         Text(
             text = uiState.fullName.ifEmpty { "User Name" },
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp
         )
 
-        // Menampilkan Email dari UI State (Hasil API)
         Text(
             text = uiState.email.ifEmpty { "user@email.com" },
             color = Color.Gray
@@ -127,7 +121,6 @@ fun ProfileScreen(
             text = "Logout",
             icon = Icons.Default.ExitToApp,
             onClick = {
-                // Tambahkan logika logout di sini jika perlu
             },
             textColor = Color.Red,
             iconColor = Color.Red

@@ -37,7 +37,6 @@ fun PostDetailScreen(
     var commentToDelete by remember { mutableStateOf<Comment?>(null) }
     var commentToEdit by remember { mutableStateOf<Comment?>(null) }
 
-    // State tambahan untuk dialog hapus POST (bukan komentar)
     var showDeletePostDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(post?.id) {
@@ -78,10 +77,9 @@ fun PostDetailScreen(
         ) {
             post?.let { currentPost ->
                 item {
-                    // --- PERBAIKAN 1: Hubungkan callback PostCard ke ViewModel ---
                     PostCard(
                         post = currentPost,
-                        onClickPost = {}, // Di detail tidak perlu klik post lagi
+                        onClickPost = {},
                         onClickEdit = {
                             vm.selectPostForEditing(currentPost)
                             navController.navigate("editPost")
@@ -123,7 +121,6 @@ fun PostDetailScreen(
         }
     }
 
-    // ===== DIALOG EDIT KOMENTAR =====
     commentToEdit?.let { comment ->
         EditCommentDialog(
             comment = comment,
@@ -137,7 +134,6 @@ fun PostDetailScreen(
         )
     }
 
-    // ===== DIALOG HAPUS KOMENTAR =====
     commentToDelete?.let { comment ->
         AlertDialog(
             onDismissRequest = { commentToDelete = null },
@@ -157,7 +153,6 @@ fun PostDetailScreen(
         )
     }
 
-    // ===== DIALOG HAPUS POST (PERBAIKAN 2) =====
     if (showDeletePostDialog) {
         AlertDialog(
             onDismissRequest = { showDeletePostDialog = false },

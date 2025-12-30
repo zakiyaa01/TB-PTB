@@ -41,7 +41,6 @@ fun PostCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // --- HEADER: FOTO PROFIL & NAMA ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(
                     model = "http://10.0.2.2:3000${post.authorProfileImage}",
@@ -59,7 +58,6 @@ fun PostCard(
                     Text(post.timestamp, fontSize = 12.sp, color = Color.Gray)
                 }
 
-                // Dropdown Menu (Edit/Hapus)
                 Box {
                     IconButton(onClick = { expanded = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = null)
@@ -79,10 +77,8 @@ fun PostCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // --- KONTEN TEKS ---
             Text(post.content)
 
-            // --- KONTEN GAMBAR (JIKA ADA) ---
             post.imageUri?.let { uri ->
                 Spacer(modifier = Modifier.height(12.dp))
                 AsyncImage(
@@ -98,17 +94,15 @@ fun PostCard(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
 
-            // --- FOOTER: JUMLAH KOMENTAR ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_gallery), // Gunakan ic_comment jika ada
+                    painter = painterResource(id = R.drawable.ic_gallery),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = Color.Gray
                 )
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Gunakan .size untuk sementara agar stabil
                 Text(
                     text = "${post.comments.size} Comments",
                     fontSize = 12.sp,

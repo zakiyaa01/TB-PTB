@@ -14,10 +14,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
-// =======================
-// DATA CLASS
-// =======================
-
 data class Comment(
     val id: String,
     val author: String,
@@ -36,17 +32,12 @@ data class Post(
     val comments: List<Comment> = emptyList()
 )
 
-// =======================
-// VIEWMODEL
-// =======================
-
 class AsisHubViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AsisHubRepository(
         api = RetrofitClient.getInstance(getApplication()),
         context = getApplication()
     )
-
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
     val posts: StateFlow<List<Post>> = _posts
     private val _postToEdit = MutableStateFlow<Post?>(null)
@@ -57,9 +48,7 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
     val postToView: StateFlow<Post?> = _postToView
     private val _currentUserProfile = MutableStateFlow<String?>(null)
     val currentUserProfile: StateFlow<String?> = _currentUserProfile
-    // =======================
-    // IMAGE
-    // =======================
+
 
     fun onImageSelected(uri: Uri?) {
         _selectedImageUri.value = uri
@@ -69,9 +58,6 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
         _selectedImageUri.value = null
     }
 
-    // =======================
-    // CREATE POST (DATABASE REAL)
-    // =======================
 
     fun createPost(content: String, imageUri: Uri?) {
         viewModelScope.launch {
@@ -89,7 +75,6 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
                 val newPost = Post(
                     id = postFromApi.id,
                     author = postFromApi.username,
-                    // 1️⃣ PERBAIKAN TANGGAL DISINI
                     timestamp = postFromApi.created_at.split("T")[0],
                     content = postFromApi.content,
                     imageUri = postFromApi.media?.let { Uri.parse(it) },
@@ -105,10 +90,6 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // =======================
-    // POST DETAIL + COMMENT
-    // =======================
-
     fun selectPostForViewing(post: Post) {
         _postToView.value = post
         loadComments(post.id)
@@ -121,8 +102,7 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
                     postId = postId,
                     comment = content
                 )
-                // REFRESH: Ambil data komentar terbaru dari database agar muncul di UI
-                loadComments(postId)
+               loadComments(postId)
             } catch (e: Exception) {
                 Log.e("ADD_COMMENT", e.message ?: "Gagal")
             }
@@ -143,12 +123,10 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
                     )
                 }
 
-                // Update list post utama
                 _posts.update { list ->
                     list.map { p -> if (p.id == postId) p.copy(comments = mapped) else p }
                 }
 
-                // REFRESH DETAIL: Pastikan layar detail mendapatkan list komentar terbaru
                 _postToView.value = _posts.value.find { it.id == postId }
 
             } catch (e: Exception) {
@@ -210,14 +188,12 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
         val post = _postToEdit.value ?: return
         viewModelScope.launch {
             try {
-                // 1. Kirim update ke API
                 repository.updatePost(
                     postId = post.id,
                     content = updatedContent.toRequestBody("text/plain".toMediaType()),
                     media = null
                 )
 
-                // 2. Update list lokal secara instan agar UI tidak delay
                 _posts.update { list ->
                     list.map {
                         if (it.id == post.id) it.copy(content = updatedContent, imageUri = newImageUri)
@@ -225,10 +201,8 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
-                // 3. Update view detail langsung dari data yang baru saja diubah
                 _postToView.value = _posts.value.find { it.id == post.id }
 
-                // 4. Baru panggil fetchPosts untuk memastikan sinkronisasi dengan database
                 fetchPosts()
 
                 clearEditingState()
@@ -251,7 +225,6 @@ class AsisHubViewModel(application: Application) : AndroidViewModel(application)
                         id = it.id,
                         author = it.username,
                         authorProfileImage = it.profile_image,
-                        // 3️⃣ PERBAIKAN TANGGAL DISINI
                         timestamp = it.created_at.split("T")[0],
                         content = it.content,
                         imageUri = it.media?.let { media ->

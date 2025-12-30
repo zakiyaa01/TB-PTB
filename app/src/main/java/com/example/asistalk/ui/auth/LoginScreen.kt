@@ -46,11 +46,6 @@ fun LoginScreen(
         UserPreferencesRepository(context)
     }
 
-    /**
-     * ✅ PERBAIKAN UTAMA DI SINI
-     * - Flow TIDAK BOLEH collect bersarang
-     * - Pakai first() karena cuma ambil nilai awal
-     */
     LaunchedEffect(Unit) {
         rememberMe = userPrefsRepo.rememberMeFlow.first()
 
@@ -180,7 +175,7 @@ fun LoginScreen(
                                 rememberMe
                             )
 
-                            // 1️⃣ LOGIN
+
                             val request = LoginRequest(username, password)
                             val api = RetrofitClient.getInstance(context)
                             val response = api.loginUser(request)

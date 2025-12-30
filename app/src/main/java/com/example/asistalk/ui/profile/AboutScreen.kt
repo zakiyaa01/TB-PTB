@@ -45,7 +45,6 @@ fun AboutScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // --- LOGO APLIKASI ---
             Image(
                 painter = painterResource(id = R.drawable.logo_asistalk_hijau),
                 contentDescription = "App Logo",
@@ -54,7 +53,6 @@ fun AboutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- NAMA APLIKASI ---
             Text(
                 text = "AsisTalk App",
                 fontSize = 24.sp,
@@ -63,7 +61,6 @@ fun AboutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // --- VERSI APLIKASI ---
             Text(
                 text = "Version 1.0.0",
                 fontSize = 16.sp,
@@ -72,7 +69,6 @@ fun AboutScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- DESKRIPSI ---
             Text(
                 text = """
                     This application is developed to support the daily activities
