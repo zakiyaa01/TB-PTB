@@ -66,7 +66,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
     private val _uploadEvent = MutableStateFlow<Boolean?>(null)
     val uploadEvent = _uploadEvent.asStateFlow()
 
-    // --- SESSION & FILTER STATE ---
     var currentUserId by mutableStateOf(-1)
     var currentUserFullName by mutableStateOf("")
     var selectedTabIndex by mutableIntStateOf(0)
@@ -110,7 +109,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _materials.value = filtered
     }
 
-    // ---  DOWNLOAD ---
     fun downloadMaterial(context: Context, url: String, subject: String) {
         try {
             val adjustedUrl = url.replace("localhost", "10.0.2.2")
@@ -125,7 +123,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
             val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             manager.enqueue(request)
 
-            // NOTIFIKASI
             NotificationHelper.addLog(context, "Unduhan Dimulai", "Materi '$subject' sedang diunduh.")
 
             Toast.makeText(context, "Unduhan dimulai...", Toast.LENGTH_SHORT).show()
@@ -151,7 +148,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- ACTION METHODS ---
     fun onSubjectChange(v: String) { _subject.value = v }
     fun onTopicChange(v: String) { _topic.value = v }
     fun onDescriptionChange(v: String) { _description.value = v }
@@ -175,7 +171,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         _currentFileName.value = item.file_path.substringAfterLast("/")
     }
 
-    // --- UPLOAD ---
     fun uploadMaterial(context: Context) {
         val uri = _selectedFileUri.value ?: return
         viewModelScope.launch {
@@ -206,7 +201,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- UPDATE ---
     fun updateMaterial(context: Context) {
         val id = editingMaterialId ?: return
         viewModelScope.launch {
@@ -227,7 +221,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
                 )
                 _uploadEvent.value = response.success
                 if (response.success) {
-                    // NOTIFIKASI
                     NotificationHelper.addLog(context, "Materi Diperbarui", "Materi '${_subject.value}' berhasil diubah.")
                     fetchAllMaterials()
                 }
@@ -239,14 +232,12 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- DELETE ---
     fun deleteMaterial(id: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val response = repository.deleteMaterial(id)
                 if (response.success) {
-                    // NOTIFIKASI
                     NotificationHelper.addLog(getApplication(), "Materi Dihapus", "Materi telah berhasil dihapus dari sistem.")
 
                     _allMaterials.value = _allMaterials.value.filter { it.id != id }
@@ -272,7 +263,6 @@ class AsisLearnViewModel(application: Application) : AndroidViewModel(applicatio
         editingMaterialId = null
     }
 
-    // --- HELPERS ---
     private fun createPart(v: String): RequestBody = v.toRequestBody("text/plain".toMediaTypeOrNull())
 
     private fun createMultipart(f: File, originalFileName: String): MultipartBody.Part {

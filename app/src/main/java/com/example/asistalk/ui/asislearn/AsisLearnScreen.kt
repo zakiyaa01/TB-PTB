@@ -44,14 +44,11 @@ fun AsisLearnScreen(
     val materials by viewModel.materials.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    // --- LOGIKA NOTIFIKASI
     var prevSize by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(materials) {
-        //materi baru
         if (materials.size > prevSize && prevSize != 0) {
             val latest = materials.firstOrNull()
-            // Jika pengunggah bukan user
             if (latest != null && latest.user_id != viewModel.currentUserId) {
                 NotificationHelper.addLog(
                     context,
@@ -90,7 +87,6 @@ fun AsisLearnScreen(
             contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 24.dp)
         ) {
 
-            // 1. HEADER
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -112,7 +108,7 @@ fun AsisLearnScreen(
                     )
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // notif
+
                     Icon(
                         painter = painterResource(R.drawable.ic_notification),
                         contentDescription = "Notif",
@@ -129,7 +125,6 @@ fun AsisLearnScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // --- 2. SEARCH + UPLOAD ---
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -167,7 +162,7 @@ fun AsisLearnScreen(
                     }
                 }
             }
-            // --- 3. TAB NAVIGATION ---
+
             item {
                 TabRow(
                     selectedTabIndex = selectedTab,
@@ -199,7 +194,6 @@ fun AsisLearnScreen(
                 }
             }
 
-            // --- 4. LIST CONTENT ---
             when {
                 isLoading -> {
                     item {

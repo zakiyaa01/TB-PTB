@@ -30,7 +30,6 @@ fun UploadMaterialScreen(
 ) {
     val context = LocalContext.current
 
-    // ===== STATE VIEWMODEL =====
     val subject by viewModel.subject.collectAsState()
     val topic by viewModel.topic.collectAsState()
     val description by viewModel.description.collectAsState()
@@ -187,8 +186,6 @@ fun UploadMaterialScreen(
             } else {
                 Button(
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    // Validasi: Subject & Topic wajib.
-                    // File wajib hanya untuk upload baru (editingMaterialId == null).
                     enabled = subject.isNotBlank() && topic.isNotBlank() &&
                             (viewModel.editingMaterialId != null || selectedFileUri != null),
                     onClick = {
@@ -212,9 +209,6 @@ fun UploadMaterialScreen(
     }
 }
 
-/* =======================
-   UI HELPERS (Penting agar tidak error)
-   ======================= */
 @Composable
 fun LabelText(text: String) {
     Text(
